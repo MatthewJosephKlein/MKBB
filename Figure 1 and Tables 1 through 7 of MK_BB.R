@@ -849,7 +849,32 @@ DiD_food_impact_fun("carne.de.res.o.puerco")
 
 # Step 0: Verify that the primary employment and the other income source variables are the same across waves
 # step 1: recitfy differences between the other income source variables. They added a few options in the later two waves
+#         There are pretty big differences in the number system, gotta sort em
 # Step 2: use the count function to get a count for each
+
+sample.analog$corrected_other_income_source_1 <- sample.analog$other_income_source
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2  &
+                                                sample.analog$other_income_source == 6] <- 15
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source == 7] <- 16
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2  &
+                                                sample.analog$other_income_source == 8] <- 6
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source == 9] <- 7
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source == 10] <- 8
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source == 11] <- 9
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source == 12] <- 10
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source == 13] <- 11
+
+#Visualize
+table(sample.analog$corrected_other_income_source_1, sample.analog$sex)
+
+sample.analog$other_income_source <- as.factor(sample.analog$other_income_source)
+levels(sample.analog$other_income_source) <- c("TOOTSOOTSOTOSOTOSTOTOSTs")
 
 
 employment_and_sex.df <-  sample.analog %>%
