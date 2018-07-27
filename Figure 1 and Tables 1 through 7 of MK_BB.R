@@ -870,12 +870,40 @@ sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2 &
 sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 2 &
                                                 sample.analog$other_income_source == 13] <- 11
 
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 1] <- 17
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 2] <- 1
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 3] <- 2
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 4] <- 3
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 5] <- 4
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 6] <- 5
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 7] <- 15
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 8] <- 16
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 9] <- 6
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 10] <- 7
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 11] <- 8
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 12] <- 9
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 13] <- 10
+sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source == 14] <- 11
+
 #Visualize
 table(sample.analog$corrected_other_income_source_1, sample.analog$sex)
 
 sample.analog$other_income_source <- as.factor(sample.analog$other_income_source)
 levels(sample.analog$other_income_source) <- c("TOOTSOOTSOTOSOTOSTOTOSTs")
-
 
 employment_and_sex.df <-  sample.analog %>%
   filter(age %in% c(16:70)) %>%
@@ -887,7 +915,7 @@ employment_and_sex.df <-  sample.analog %>%
 other_employment_1_and_sex.df <-  sample.analog %>% 
   filter(age %in% c(16:70)) %>%
   group_by(sex) %>% 
-  count(other_income_source) %>% 
+  count(corrected_other_income_source_1) %>% 
   spread(key = sex, value = n) %>%
   View()
 
@@ -901,9 +929,10 @@ other_employment_2_and_sex.df <-  sample.analog %>%
 
 str(sample.analog$other_income_source)
 
-table(sample.analog$primary_employment[sample.analog$sex == 1 & sample.analog$age %in% c(16:70)])
-table(sample.analog$other_income_source[sample.analog$sex == 1 & sample.analog$age %in% c(16:70)])
-table(sample.analog$other_income_source2[sample.analog$sex == 1 & sample.analog$age %in% c(16:70)])
+mean(sample.analog$otherincomeval1[sample.analog$corrected_other_income_source_1 == 6  &
+                                     sample.analog$sex == 0 ], na.rm=T)
 
+mean(sample.analog$otherincomeval1[sample.analog$corrected_other_income_source_1 == 6  &
+                                     sample.analog$sex == 1 ], na.rm=T)
 
 
