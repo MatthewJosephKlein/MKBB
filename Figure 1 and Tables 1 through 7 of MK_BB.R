@@ -1,0 +1,844 @@
+# Mjklein 
+# Madison, Wisc.
+# 1/11/2018
+
+# This code takes the cleaned dataset as an input, and outputs Figure 1, Tables 1 - 7 of MK/BB
+# As with "Bootstrap Function Code.R", 
+
+# This code is split into 6 chapters:
+# Chapter 1, Generating the HH Level Dataset. 
+# Chapter 2: HH Summary Stats Table
+# Chapter 3: Diet Summary Stats Table
+# Chapter 4: Predicted Earnings Tables (Tables 4 and 5 in MK.BB)
+# Chapter 5: Estimating BP for each HH and generating Figure 1
+# Chapter 6: Table 7
+
+# 7/27/2018 Adding in the tables for 
+
+rm(list=ls())
+library("sampleSelection")
+library("lfe")
+library("glmmML")
+library("plyr")
+
+# Chapter 1: Functions ####
+
+load("hh.df.Rda") # This data.frame is generated in "Final Cleaning for Master Panel Construction.R"
+
+temp.df <- aggregate(hh.df$progresa_income_total[hh.df$wavenumber==2], 
+                     by =list(hh.df$folio[hh.df$wavenumber==2]), FUN=mean, na.rm=T)
+colnames(temp.df) <- c("folio", "progresa_income_total_in_period_2")
+temp.df$treatment_household <- rep(0)
+temp.df$treatment_household[temp.df$progresa_income_total_in_period_2>0] <- 1
+summary(temp.df)
+
+hh.df <- merge(hh.df, temp.df, by = c("folio"))
+
+# A) BP Function (Hyp 1)
+#    A.1) Shadow Earnings function
+# B) LPM.Marginal.Fun (Hyp 2, 3)
+# C) LPM.Marginal.Fun.Comparison (Hyp 4)
+# D) Poisson.Marginal.Fun (Hyp 2)
+# E) Generate the analog
+
+# (A.1) Shadow Earnings (SE) Function 
+SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
+  data.df <- subset(sample.analog,  sample.analog$age > 15 & sample.analog$sex == gender_number &  sample.analog$age <= 70)
+  
+  selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+    number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+    as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
+    ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
+    proportion_need_permission + proportion_need_accompany  
+  
+  outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+    number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy    
+  
+  if(gender_number == 1){  
+    
+    selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+      as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
+      ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
+      proportion_need_permission + proportion_need_accompany + progresa_income_mom
+    
+    outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+      I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy  +  progresa_income_mom    # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
+    
+  }
+  
+  reg <- selection(selection_formula, outcome_formula, data = data.df, method = "ml")
+  summary(reg)
+  # stargazer::stargazer(reg$probit, reg1$probit, omit = c("year_wave_FE"), single.row = T)
+  # Have to generate the fitted values by hand since the canned packages aren't calculating the values for NA's.
+  
+  coefs <- matrix(as.numeric(reg$estimate[55:length(reg$estimate)-2]), ncol = 1)
+  
+  if(gender_number==1){
+  coefs <- matrix(as.numeric(reg$estimate[56:length(reg$estimate)-2]), ncol = 1)
+  }
+  
+  X <- model.matrix(outcome_formula, model.frame(outcome_formula, data.df, na.action = na.pass)) # Thanks, Travis, for the idea
+  
+  y_hat <- exp(X%*%coefs)
+  y_hat.df <- as.data.frame(cbind(data.df$folio, data.df$ind_ID, data.df$wavenumber, y_hat))
+  return(y_hat.df)
+}
+
+# hh.df <- subset(hh.df, hh.df$folio != 170466)
+
+# (A.2) BP Function 
+BP.Fun <- function(){ #Calls shadow wage function
+  
+  #Step 1: Call the SW function
+  y_hat_men_combined <- unique(SE.Fun(gender_number = 0)) # "_Combined" references the fact that all years are used in estimation
+  y_hat_women_combined <- unique(SE.Fun(gender_number = 1))
+  names(y_hat_men_combined) <- c("folio", "ind_ID", "wavenumber", "y_hat_men_combined") 
+  names(y_hat_women_combined) <- c("folio", "ind_ID", "wavenumber", "y_hat_women_combined")
+  
+  #step 2: Merging it into the sample analog. DO NOT DELETE THE LINES THAT CONVERT NA's TO 0's.
+  sample.analog <- merge(sample.analog, y_hat_women_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
+  sample.analog$y_hat_women_combined[is.na(sample.analog$y_hat_women_combined)] <- 0
+  sample.analog <- merge(sample.analog, y_hat_men_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
+  sample.analog$y_hat_men_combined[is.na(sample.analog$y_hat_men_combined)] <- 0
+  
+  #Step 3: In steps 1 and 2, every person in the HH has an estimated outside option / shadow earnings. We need to just have the mom and dad. 
+  sample.analog$Mom_SW_combined_a <- sample.analog$y_hat_women_combined * sample.analog$head_dummy
+  Mom_SW_combined.df <- aggregate(sample.analog$Mom_SW_combined_a, by = list(Category=sample.analog$folio), FUN=sum)
+  names(Mom_SW_combined.df) <- c("folio", "Mom_SW_combined")
+  sample.analog <- merge(sample.analog, Mom_SW_combined.df, by = "folio")
+  
+  sample.analog$Dad_SW_combined_a <- sample.analog$y_hat_men_combined * sample.analog$head_dummy
+  Dad_SW_combined.df <- aggregate(sample.analog$Dad_SW_combined_a, by = list(Category=sample.analog$folio), FUN=sum)
+  names(Dad_SW_combined.df) <- c("folio", "Dad_SW_combined")
+  sample.analog <- merge(sample.analog, Dad_SW_combined.df, by = "folio")
+  
+  #Step 4: Generating the relative shadow earnings BP Proxy
+    
+    #BP = (\hat{E}_f + T_f) / (\hat{E}_f + T_f + \hat{E}_m + T_m)
+    
+  sample.analog$BP[sample.analog$wave1 == 1] <- (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
+                                                 sample.analog$T_mom_total[sample.analog$wavenumber == 1] )  / 
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
+       sample.analog$T_mom_total[sample.analog$wavenumber == 1] +
+    sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
+      sample.analog$T_dad_total[sample.analog$wavenumber == 1])
+  
+  sample.analog$BP[sample.analog$wavenumber == 2] <- 
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
+       sample.analog$T_mom_total[sample.analog$wavenumber == 2])  /
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] +
+       sample.analog$T_mom_total[sample.analog$wavenumber == 2] + 
+       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
+       sample.analog$T_dad_total[sample.analog$wavenumber == 2])
+  
+  sample.analog$BP[sample.analog$wavenumber == 3] <- 
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] + 
+       sample.analog$T_mom_total[sample.analog$wavenumber == 3])  /
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] +
+       sample.analog$T_mom_total[sample.analog$wavenumber == 3] + 
+       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
+       sample.analog$T_dad_total[sample.analog$wavenumber == 3])
+  
+  
+  t1 <- t.test(sample.analog$BP[sample.analog$wave2 == 1 & sample.analog$treatment_dummy == "Basal"], 
+               sample.analog$BP[sample.analog$wave1 == 1 & sample.analog$treatment_dummy == "Basal"])
+  t2 <-  t.test(sample.analog$BP[sample.analog$wave2 == 1 & sample.analog$treatment_dummy == "Control"], 
+                sample.analog$BP[sample.analog$wave1 == 1 & sample.analog$treatment_dummy == "Control"])
+  
+  return(list(sample.analog, t1$statistic, t2$statistic, 
+              mean(sample.analog$BP[sample.analog$wave1 == 1], na.rm = T), 
+              mean(sample.analog$BP[sample.analog$wave2 == 1], na.rm = T),
+              mean(sample.analog$BP[sample.analog$wave3 == 1], na.rm = T)))  
+} 
+
+
+# Chapter 1.b: Generating the BP values and Final.df #####
+
+sample.analog <- hh.df 
+
+BP.Fun.Results <- BP.Fun()
+sample.analog <- BP.Fun.Results[[1]]
+
+# making a matrix of just the HH level variables: 
+final.df <- aggregate(sample.analog$BP, by = list(sample.analog$folio, sample.analog$wavenumber), FUN=mean, na.rm=T)
+colnames(final.df) <- c("folio", "wavenumber", "BP")
+
+final.df <- unique(merge(sample.analog[,c("folio", "wavenumber", "loc_id", "hh_log_wages" , "hh_kids" , "hh_young_kids" , 
+                                          "progresa_income_total","wave2", "wave3", "treatment_dummy_num", "seven_states", "mpio", 
+                                          "rice.price_hybrid", "bean.price_hybrid", "egg.price_hybrid", "milk.price_hybrid", # Staples
+                                          # ANIMAL PRODUCTS
+                                          "pollo", "huevos", "leche", "pollo_num_times_consume", "leche_num_times_consume", "huevos_num_times_consume", "carne.de.res.o.puerco",
+                                          "pescados.y.mariscos", "pescados.y.mariscos_num_times_consume", "sardinas.o.atun.en.lata", "sardinas.o.atun.en.lata_num_times_consume",
+                                          "carne.de.res.o.puerco_num_times_consume", "manteca.de.cerdo", "manteca.de.cerdo_num_times_consume",
+                                          "chicken.price_hybrid", "lard.price_hybrid" , "sardines.price_hybrid", "tuna.price_hybrid" ,
+                                          "beef.price_hybrid",  "pork.price_hybrid",  "lard.price_hybrid" ,
+                                          # FRUITS AND VEGETABLES
+                                            "tomate.rojo" , "zanahorias", "narajas", "verdudas.de.hoja",
+                                             "narajas_num_times_consume", "tomate.rojo_num_times_consume",
+                                            "cebolla_num_times_consume", "cebolla",
+                                            "verdudas.de.hoja", "verdudas.de.hoja_num_times_consume", "platanos", 
+                                            "platanos_num_times_consume", "zanahorias_num_times_consume", "limones", "limones_num_times_consume",
+                                            "papa_num_times_consume", "papa", "manzanas", "manzanas_num_times_consume",
+                                            "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
+                                            "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid",
+                                            "tomato.price_hybrid" ,
+                                          # PULSES AND GRAINS
+                                            "digestive.biscuit.price_hybrid" ,  "frijol", "frijol_num_times_consume",
+                                            "pan.blanco.price_hybrid" , 
+                                            "tortilla.price_hybrid" , "tortialls.de.maiz_num_times_consume", "tortialls.de.maiz",
+                                            "cereales.de.caja", "cereales.de.caja_num_times_consume", "pan.blanco", "pan.de.dulce",
+                                            "pan.de.dulce_num_times_consume", "galletas", "galletas_num_times_consume",
+                                            "pan.blanco_num_times_consume", 
+                                            "pastelillos.en.bolsa_num_times_consume", "pastelillos.en.bolsa",
+                                            "maiz.en.grano_num_times_consume", "maiz.en.grano",
+                                            "harina.de.trigo_num_times_consume", "harina.de.trigo",
+                                          #  # Miscellaneous
+                                            "bebidas.alcoholicas_num_times_consume", "bebidas.alcoholicas",
+                                            "cafe", "cafe_num_times_consume", "arroz", "arroz_num_times_consume",
+                                            "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" ,
+                                            "azucar_num_times_consume", "azucar",
+                                            "refrescos", "refrescos_num_times_consume",
+                                            "sopa.de.pasta", "sopa.de.pasta_num_times_consume",
+                                            "wheat.flour.price_hybrid" , "veg.oil.price_hybrid" , 
+                                            "aciete.vegetal", "aciete.vegetal_num_times_consume",
+                                            "sopa.de.pasta.price_hybrid", "breakfast.cereal.price_hybrid",
+                                          "treatment_dummy", "treatment_household")], final.df, by =   c("folio", "wavenumber")))
+
+
+DiD <- (mean(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household == 1], na.rm=T) - 
+          mean(final.df$BP[final.df$wavenumber ==  1 & final.df$treatment_household == 1], na.rm=T)) -
+  (mean(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household == 0 ], na.rm=T) -
+     mean(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 0 ], na.rm=T))
+
+DiD_reg_summary <- summary(lm(BP ~ treatment_household + wavenumber + I(treatment_household*wavenumber), data = subset(final.df, final.df$wavenumber < 3)))
+sqrt(DiD_reg_summary$cov.unscaled[4,4])
+
+# Chapter 2: Summary Stats for HH's and HH Heads #####
+
+length(table(unique(hh.df$folio[hh.df$wavenumber == 1])))
+length(table(unique(hh.df$folio[hh.df$wavenumber == 2])))
+length(table(unique(hh.df$folio[hh.df$wavenumber == 3])))
+
+summary(hh.df$wages[hh.df$sex==1 & hh.df$age > 15 & hh.df$age < 71 & hh.df$LFP ==1 & hh.df$wavenumber==1])
+summary(hh.df$wages[hh.df$sex==1 & hh.df$age > 15 & hh.df$age < 71 & hh.df$LFP ==1 & hh.df$wavenumber==2])
+summary(hh.df$wages[hh.df$sex==1 & hh.df$age > 15 & hh.df$age < 71 & hh.df$LFP ==1 & hh.df$wavenumber==3])
+
+summary(hh.df$wages[hh.df$sex==0 & hh.df$age > 15 & hh.df$age < 71 & hh.df$LFP ==1 & hh.df$wavenumber==1])
+summary(hh.df$wages[hh.df$sex==0 & hh.df$age > 15 & hh.df$age < 71 & hh.df$LFP ==1 & hh.df$wavenumber==2])
+summary(hh.df$wages[hh.df$sex==0 & hh.df$age > 15 & hh.df$age < 71 & hh.df$LFP ==1 & hh.df$wavenumber==3])
+
+summary(hh.df$LFP[hh.df$sex==1 & hh.df$age > 15 & hh.df$age < 71 & hh.df$wavenumber==1])
+summary(hh.df$LFP[hh.df$sex==1 & hh.df$age > 15 & hh.df$age < 71 & hh.df$wavenumber==2])
+summary(hh.df$LFP[hh.df$sex==1 & hh.df$age > 15 & hh.df$age < 71 & hh.df$wavenumber==3])
+
+summary(hh.df$LFP[hh.df$sex==0 & hh.df$age > 15 & hh.df$age < 71 & hh.df$wavenumber==1])
+summary(hh.df$LFP[hh.df$sex==0 & hh.df$age > 15 & hh.df$age < 71 & hh.df$wavenumber==2])
+summary(hh.df$LFP[hh.df$sex==0 & hh.df$age > 15 & hh.df$age < 71 & hh.df$wavenumber==3])
+
+summary(hh.df$progresa_income_total[hh.df$wavenumber==2 & hh.df$progresa_income_total>0])
+summary(hh.df$progresa_income_total[hh.df$wavenumber==3 & hh.df$progresa_income_total>0])
+
+summary(hh.df$edu_yrs[hh.df$sex==1 & hh.df$head_dummy==1 & hh.df$wavenumber==1])
+summary(hh.df$edu_yrs[hh.df$sex==1 & hh.df$head_dummy==1 & hh.df$wavenumber==2])
+summary(hh.df$edu_yrs[hh.df$sex==1 & hh.df$head_dummy==1 & hh.df$wavenumber==3])
+
+summary(hh.df$edu_yrs[hh.df$sex==0 & hh.df$head_dummy==1 & hh.df$wavenumber==1])
+summary(hh.df$edu_yrs[hh.df$sex==0 & hh.df$head_dummy==1 & hh.df$wavenumber==2])
+summary(hh.df$edu_yrs[hh.df$sex==0 & hh.df$head_dummy==1 & hh.df$wavenumber==3])
+
+summary(hh.df$age[hh.df$sex==1 & hh.df$head_dummy==1 & hh.df$wavenumber==1])
+summary(hh.df$age[hh.df$sex==1 & hh.df$head_dummy==1 & hh.df$wavenumber==2])
+summary(hh.df$age[hh.df$sex==1 & hh.df$head_dummy==1 & hh.df$wavenumber==3])
+
+summary(hh.df$age[hh.df$sex==0 & hh.df$head_dummy==1 & hh.df$wavenumber==1])
+summary(hh.df$age[hh.df$sex==0 & hh.df$head_dummy==1 & hh.df$wavenumber==2])
+summary(hh.df$age[hh.df$sex==0 & hh.df$head_dummy==1 & hh.df$wavenumber==3])
+
+summary(hh.df$hh_kids[hh.df$wavenumber == 1])
+summary(hh.df$hh_kids[hh.df$wavenumber == 2])
+summary(hh.df$hh_kids[hh.df$wavenumber == 3])
+
+summary(hh.df$hh_wages[hh.df$wavenumber==1])
+summary(hh.df$hh_wages[hh.df$wavenumber==2])
+summary(hh.df$hh_wages[hh.df$wavenumber==3])
+
+inflation_1998 <- 18.61
+inflation_1999 <- 12.32
+inflation_2000 <- 8.96
+
+summary(hh.df$hh_wages[hh.df$wavenumber==2]*(1-.1861)*(1-.1232))
+summary(hh.df$hh_wages[hh.df$wavenumber==3]*(1-.1861)*(1-.1232)*(1-0.0896))
+
+summary(hh.df$indigenous_language[hh.df$wavenumber==1])
+summary(hh.df$indigenous_language[hh.df$wavenumber==2])
+summary(hh.df$indigenous_language[hh.df$wavenumber==3])
+
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==1 & sample.analog$sex==1 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==2 & sample.analog$sex==1 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==3 & sample.analog$sex==1 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
+
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==1 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==2 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==3 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
+
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==1 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==2 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==3 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
+
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==1 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==2 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==3 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
+
+prop.table(table(hh.df$seven_states[ hh.df$wavenumber==1]))
+prop.table(table(hh.df$seven_states[ hh.df$wavenumber==2]))
+prop.table(table(hh.df$seven_states[ hh.df$wavenumber==3]))
+
+# Now input that information by hand to generate Table 1: Summary Statistics. 
+
+# Chapter 3: Summary Stats for Diet #####
+
+food_var_names <- c('tomate.rojo', 'cebolla', 'papa', 'zanahorias', 'verdudas.de.hoja', 'narajas', 'platanos', 
+                    'manzanas', 'limones',
+                    'tortialls.de.maiz', 'maiz.en.grano', 'pan.blanco', 
+                    'pan.de.dulce', 'pan.de.caja', 
+                    'harina.de.trigo', 'sopa.de.pasta', 'arroz', 'galletas', 'frijol', 
+                    'cereales.de.caja',
+                    'pollo', 'carne.de.res.o.puerco', 'carne.de.cabra.u.oveja', 'pescados.y.mariscos', 
+                    'sardinas.o.atun.en.lata', 
+                    'huevos', 'leche', 'manteca.de.cerdo', 'pastelillos.en.bolsa', 'refrescos', 
+                    'bebidas.alcoholicas', 'cafe', 'azucar', 'aciete.vegetal')
+
+food_var_names_num <- paste0(food_var_names, "_num_times_consume", sep="")
+
+
+stargazer(hh.df[,food_var_names][hh.df$wavenumber == 1,],
+          nobs = FALSE, min.max = FALSE)
+
+stargazer(hh.df[,food_var_names][hh.df$treatment_household == 1 & hh.df$wavenumber == 2,],
+          hh.df[,food_var_names][hh.df$treatment_household == 0 & hh.df$wavenumber == 2,],
+          nobs = FALSE, min.max = FALSE)
+
+stargazer(hh.df[,food_var_names][hh.df$wavenumber == 3,],
+          nobs = FALSE, min.max = FALSE)
+
+stargazer(hh.df[,food_var_names_num][hh.df$wavenumber == 1,],
+          hh.df[,food_var_names_num][hh.df$wavenumber == 2 & hh.df$treatment_household == 0,],
+          hh.df[,food_var_names_num][hh.df$wavenumber == 2 & hh.df$treatment_household == 1,],
+          hh.df[,food_var_names_num][hh.df$wavenumber == 3,],
+          nobs = FALSE, min.max = FALSE)
+
+# Put it together by hand. 
+
+# Chapter 4: Generating Tables 4 and 5, the predicted earnings tables ####
+
+data.df <- subset(sample.analog,  sample.analog$age > 15 & sample.analog$sex == 0 &  sample.analog$age <= 70)
+
+selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+  number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+  as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
+  ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults + proportion_need_permission + proportion_need_accompany  
+
+outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+  number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +
+  as.factor(year_wave_FE) + treatment_dummy    
+
+reg_men <- selection(selection_formula, outcome_formula, data = data.df, method = "ml")
+summary(reg_men)
+
+data.df <- subset(hh.df,  hh.df$age > 15 & hh.df$sex == 1 &  hh.df$age <= 70)
+
+selection_formula <- LFP ~age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+  number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+  as.factor(year_wave_FE) + treatment_dummy + proportion_need_accompany + proportion_need_permission + # FE and Exclusion Restrictions
+  ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults  + progresa_income_mom   # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
+
+outcome_formula <-  log_wages ~age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+  number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+  as.factor(year_wave_FE) + treatment_dummy + 
+  progresa_income_mom # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
+
+reg_women <- selection(selection_formula, outcome_formula, data = data.df, method = "ml")
+summary(reg_women)
+
+stargazer::stargazer(reg_women, reg_men, omit = c("year_wave_FE"), single.row = T)
+
+a <- summary(reg_women)
+b <- summary(reg_men)
+
+t1 <- xtable::xtable(a$estimate[1:53,],  omit = c("year_wave_FE"), single.row = T)
+t2 <- xtable::xtable(b$estimate[1:52,],  omit = c("year_wave_FE"), single.row = T)
+
+t <- as.data.frame(cbind(rownames(a$estimate)[1:53],t1[1:52,"Estimate"], 
+                         t1[1:52,"Std. error"], t2[1:52,"Estimate"], t2[1:52,c("Std. error")]), NCOL=5)
+
+colnames(t) <- c("Names", "Women Estimate1", " Women Std.1", " Men Estimate2", "Men std.2")
+
+t$`Women Estimate1` <- as.numeric(as.character(t$`Women Estimate1`))
+t$` Women Std.1` <- as.numeric(as.character(t$` Women Std.1`))
+t$` Men Estimate2` <- as.numeric(as.character(t$` Men Estimate2`))
+t$`Men std.2` <- as.numeric(as.character(t$`Men std.2`))
+
+
+stargazer::stargazer(t, summary = FALSE, omit = c("as.factor(year_wave_FE)"))
+
+# Chapter 5: Generating Figure 1: a graph of BP over time for the treatment and control groups #####
+ 
+par(mfrow=c(3,1))
+#hist(final.df$BP[final.df$wavenumber == 1], col = rgb(1,1,1), main = "1997", xlab = "Bargaining Power", 
+#     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+
+hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 0], col = rgb(1,1,1,0.25, 0.25), main = "1997", xlab = "Bargaining Power", 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+par(new = T)
+hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 1], col = rgb(0,0,0,0.25, 0.25),  
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+
+legend("topright", legend = c("control (white)", "treatment (grey)"), col = c("black", "black"), pch = c(0,15))
+
+hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total == 0], col = rgb(1,1,1,0.25, 0.25), main = "1999", xlab = "Bargaining Power", 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+par(new = T)
+hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total > 0], col = rgb(0,0,0,0.25, 0.25), 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+
+hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total == 0], col = rgb(1,1,1, 0.25, 0.25), main = "2000", xlab = "Bargaining Power", 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+par(new = T)
+hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0], col = rgb(0,0,0, 0.25, 0.25), 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+
+
+# Color Version for website and other media
+
+
+par(mfrow=c(3,1))
+
+hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 0], col = rgb(0.25,0.75,0.25,0.25, 0.25), main = "1997", xlab = "Bargaining Power", 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+par(new = T)
+hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 1],
+     col = rgb(0,0,1,0.25, 0.25),  
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+
+legend("topright", legend = c("control (green)", "treatment (blue)"), col = c("light green", "blue"), pch = c(15,15))
+
+hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total == 0], col = rgb(0.25,0.75,0.25,0.25, 0.25), main = "1999", xlab = "Bargaining Power", 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+par(new = T)
+hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total > 0], col = rgb(0,0,1,0.25, 0.25), 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+
+hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total == 0], col = rgb(0.25,0.75,0.25,0.25, 0.25), main = "2000", xlab = "Bargaining Power", 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+par(new = T)
+hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0], col = rgb(0,0,1,0.25, 0.25), 
+     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+
+
+# Chapter 6: Generating the Chicken Table ####
+
+summary(chick_LPM <- felm(pollo ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+                            chicken.price_hybrid +
+                            beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
+                            lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
+                           # orange.price_hybrid + apple.price_hybrid + lime.price_hybrid +
+                            milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid 
+                          | folio + wavenumber | 0 | loc_id,
+           data = final.df))
+
+summary(milk_LPM <- felm(leche ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+                            chicken.price_hybrid +
+                            beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
+                            lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
+                            # orange.price_hybrid + apple.price_hybrid + lime.price_hybrid +
+                            milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid 
+                          | folio + wavenumber | 0 | loc_id,
+                          data = final.df))
+
+
+keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & is.na(BP) == FALSE})
+final.df.subset <- final.df[keep.index, ]
+final.df.subset$BP2 <- final.df.subset$BP^2
+
+summary(chick_Poisson <- glmmboot(final.df.subset[,"pollo"] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
+                                    chicken.price_hybrid +
+                                    lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
+                                    beef.price_hybrid + pork.price_hybrid +   
+                                    milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid, 
+               cluster = folio,
+               data = final.df.subset, family = poisson))
+
+
+summary(milk_Poisson <- glmmboot(final.df.subset[,"leche"] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
+                                    chicken.price_hybrid +
+                                    lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
+                                    beef.price_hybrid + pork.price_hybrid +   
+                                    milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid, 
+                                  cluster = folio,
+                                  data = final.df.subset, family = poisson))
+
+
+#summary(milk_Poisson <- glmmboot(final.df[,"leche"] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
+#                                    chicken.price_hybrid +
+#                                   lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
+#                                    beef.price_hybrid + pork.price_hybrid +   
+#                                    milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid, 
+#                                  cluster = folio,
+#                                  data = final.df, family = poisson))
+
+stargazer::stargazer(chick_LPM, milk_LPM, chick_LPM, milk_LPM, single.row=T)
+
+# Chapter 7: generating 62 Point Estimate Results ###### 
+
+DiD <- (mean(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household == 1], na.rm=T) - 
+          mean(final.df$BP[final.df$wavenumber ==  1 & final.df$treatment_household == 1], na.rm=T)) -
+  (mean(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household == 0], na.rm=T) -
+     mean(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 0], na.rm=T))
+
+
+keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & is.na(BP) == FALSE})
+final.df.subset <- final.df[keep.index, ]
+final.df.subset$BP2 <- final.df.subset$BP^2
+
+# (B) Linear Probability Model on Whole Sample for animal 
+LPM_ME_Fun_animal <- function(food_name){
+  i <- which(colnames(final.df) == food_name)
+  print(i)
+  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+               chicken.price_hybrid +
+               beef.price_hybrid + pork.price_hybrid +   
+               lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
+               milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid | folio + wavenumber | 0 | loc_id,
+             data = final.df)
+  
+  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), 2*p1$coefficients[2]))
+  
+}
+
+
+# (D) Poisson Model
+Poisson_ME_Fun_animal <- function(food_name){
+  i <- which(colnames(final.df.subset) == food_name)
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
+                   chicken.price_hybrid +
+                   beef.price_hybrid + pork.price_hybrid +   
+                   lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
+                   milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid, 
+                 cluster = folio,
+                 data = final.df.subset, family = poisson)
+  
+  temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
+  colnames(temp) <- c("folio", "frail")
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+                                        "hh_young_kids", "wavenumber",
+                                        "chicken.price_hybrid" ,
+                                          "beef.price_hybrid" , "pork.price_hybrid" ,    
+                                          "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
+                                          "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")], temp, by = c("folio"))
+  
+  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
+                                                                    as.matrix(model.mat[,
+                                                                    c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wavenumber",   
+                                                                      "chicken.price_hybrid" ,
+                                                                      "beef.price_hybrid" , "pork.price_hybrid" ,    
+                                                                      "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
+                                                                      "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")]) %*% as.numeric(p1$coefficients)), na.rm = T)
+  
+  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  
+  return(list(ME, Cross_Partial)) }
+
+Poisson_ME_Fun_animal("pollo_num_times_consume")
+#Poisson_ME_Fun_animal("carne.de.cabra.u.oveja_num_times_consume")
+Poisson_ME_Fun_animal("carne.de.res.o.puerco_num_times_consume")
+Poisson_ME_Fun_animal("huevos_num_times_consume")
+Poisson_ME_Fun_animal("leche_num_times_consume")
+Poisson_ME_Fun_animal("pescados.y.mariscos_num_times_consume")       
+Poisson_ME_Fun_animal("sardinas.o.atun.en.lata_num_times_consume")
+Poisson_ME_Fun_animal("manteca.de.cerdo_num_times_consume")
+
+LPM_ME_Fun_animal("pollo")
+#LPM_ME_Fun_animal("carne.de.cabra.u.oveja")
+LPM_ME_Fun_animal("carne.de.res.o.puerco")
+LPM_ME_Fun_animal("huevos")
+LPM_ME_Fun_animal("leche")
+LPM_ME_Fun_animal("pescados.y.mariscos")       
+LPM_ME_Fun_animal("sardinas.o.atun.en.lata")
+LPM_ME_Fun_animal("manteca.de.cerdo")
+
+
+#FRUITS AND VEGETABLES
+
+LPM_ME_Fun_VF <- function(food_name){
+  i <- which(colnames(final.df) == food_name)
+  print(i)
+  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+               onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
+               potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
+               tomato.price_hybrid +  
+               rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
+             data = final.df)
+  
+  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), 2*p1$coefficients[2]))
+  
+}
+
+
+# (D) Poisson Model
+Poisson_ME_Fun_VF <- function(food_name){
+  i <- which(colnames(final.df.subset) == food_name)
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
+                   onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
+                   potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
+                   tomato.price_hybrid +  
+                   rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
+                 cluster = folio,
+                 data = final.df.subset, family = poisson)
+  
+  temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
+  colnames(temp) <- c("folio", "frail")
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+                                        "hh_young_kids", "wavenumber",
+                                        "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
+                                          "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid" ,
+                                          "tomato.price_hybrid" ,  
+                                          "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
+  
+  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
+                                                                              as.matrix(model.mat[,
+ c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wavenumber",   
+   "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
+   "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid" ,
+   "tomato.price_hybrid" ,  
+   "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
+   as.numeric(p1$coefficients)), na.rm = T)
+  
+  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  
+  return(list(ME, Cross_Partial)) }
+
+Poisson_ME_Fun_VF("cebolla_num_times_consume")
+Poisson_ME_Fun_VF("limones_num_times_consume")
+Poisson_ME_Fun_VF("manzanas_num_times_consume")
+Poisson_ME_Fun_VF("narajas_num_times_consume")
+Poisson_ME_Fun_VF("papa_num_times_consume")
+Poisson_ME_Fun_VF("platanos_num_times_consume")
+Poisson_ME_Fun_VF("verdudas.de.hoja_num_times_consume")
+Poisson_ME_Fun_VF("zanahorias_num_times_consume")
+Poisson_ME_Fun_VF("tomate.rojo_num_times_consume")
+
+LPM_ME_Fun_VF("cebolla")
+LPM_ME_Fun_VF("limones")
+LPM_ME_Fun_VF("manzanas")
+LPM_ME_Fun_VF("narajas")
+LPM_ME_Fun_VF("papa")
+LPM_ME_Fun_VF("platanos")
+LPM_ME_Fun_VF("verdudas.de.hoja")
+LPM_ME_Fun_VF("zanahorias")
+LPM_ME_Fun_VF("tomate.rojo")
+
+
+#PULSES AND GRAINS
+
+LPM_ME_Fun_grains <- function(food_name){
+  i <- which(colnames(final.df) == food_name)
+  print(i)
+  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+               digestive.biscuit.price_hybrid +      
+               pan.blanco.price_hybrid + 
+               tortilla.price_hybrid + wheat.flour.price_hybrid + 
+               rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
+             data = final.df)
+  
+  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), 2*p1$coefficients[2]))
+  
+}
+
+
+# (D) Poisson Model
+Poisson_ME_Fun_grains <- function(food_name){
+  i <- which(colnames(final.df.subset) == food_name)
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
+                   digestive.biscuit.price_hybrid +      
+                   pan.blanco.price_hybrid + 
+                   tortilla.price_hybrid + wheat.flour.price_hybrid + 
+                   rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
+                 cluster = folio,
+                 data = final.df.subset, family = poisson)
+  
+  temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
+  colnames(temp) <- c("folio", "frail")
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+                                        "hh_young_kids", "wavenumber",
+                                        "digestive.biscuit.price_hybrid" ,      
+                                          "pan.blanco.price_hybrid" , 
+                                          "tortilla.price_hybrid" , "wheat.flour.price_hybrid" , 
+                                          "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
+  
+  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
+                                                                              as.matrix(model.mat[,
+   c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wavenumber",   
+     "digestive.biscuit.price_hybrid" ,      
+     "pan.blanco.price_hybrid" , 
+     "tortilla.price_hybrid" , "wheat.flour.price_hybrid" , 
+     "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
+      as.numeric(p1$coefficients)), na.rm = T)
+  
+  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  
+  return(list(ME, Cross_Partial)) }
+
+
+Poisson_ME_Fun_grains("arroz_num_times_consume")
+Poisson_ME_Fun_grains("frijol_num_times_consume")
+Poisson_ME_Fun_grains("galletas_num_times_consume")
+Poisson_ME_Fun_grains("maiz.en.grano_num_times_consume")
+Poisson_ME_Fun_grains("pan.blanco_num_times_consume")
+#Poisson_ME_Fun_grains("pan.de.caja_num_times_consume")
+Poisson_ME_Fun_grains("pan.de.dulce_num_times_consume")
+#Poisson_ME_Fun_grains("pastelillos.en.bolsa_num_times_consume")
+Poisson_ME_Fun_grains("tortialls.de.maiz_num_times_consume")
+Poisson_ME_Fun_grains("harina.de.trigo_num_times_consume")
+
+LPM_ME_Fun_grains("arroz")
+LPM_ME_Fun_grains("frijol")
+LPM_ME_Fun_grains("galletas")
+LPM_ME_Fun_grains("maiz.en.grano")
+LPM_ME_Fun_grains("harina.de.trigo")
+LPM_ME_Fun_grains("pan.blanco")
+#LPM_ME_Fun_grains("pan.de.caja")
+LPM_ME_Fun_grains("pan.de.dulce")
+#LPM_ME_Fun_grains("pastelillos.en.bolsa")
+LPM_ME_Fun_grains("tortialls.de.maiz")
+
+
+# OTHER 
+
+
+LPM_ME_Fun_misc <- function(food_name){
+  i <- which(colnames(final.df) == food_name)
+  print(i)
+  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+               sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
+               veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + breakfast.cereal.price_hybrid + 
+               rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
+             data = final.df)
+  
+  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), 2*p1$coefficients[2]))
+  
+}
+
+
+keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & is.na(BP) == FALSE})
+final.df.subset <- final.df[keep.index, ]
+final.df.subset$BP2 <- final.df.subset$BP^2
+
+keep.index <- with(final.df.subset, { is.na(breakfast.cereal.price_hybrid) == FALSE})
+final.df.subset <- final.df.subset[keep.index, ]
+
+# (D) Poisson Model
+Poisson_ME_Fun_misc <- function(food_name){
+  i <- which(colnames(final.df.subset) == food_name)
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
+                   sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
+                   veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + breakfast.cereal.price_hybrid + 
+                   rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
+                 cluster = folio,
+                 data = final.df.subset, family = poisson)
+  
+  temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
+  colnames(temp) <- c("folio", "frail")
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+                                        "hh_young_kids", "wavenumber",
+                                        "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
+                                          "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , "breakfast.cereal.price_hybrid" , 
+                                          "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
+  
+  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
+                                                                              as.matrix(model.mat[,
+   c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wavenumber",   
+     "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
+     "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , "breakfast.cereal.price_hybrid" , 
+     "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid" )]) %*% 
+                                                                              as.numeric(p1$coefficients)), na.rm = T)
+  
+  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  
+  return(list(ME, Cross_Partial)) }
+
+
+Poisson_ME_Fun_misc("azucar_num_times_consume")
+Poisson_ME_Fun_misc("cafe_num_times_consume")
+Poisson_ME_Fun_misc("refrescos_num_times_consume")
+Poisson_ME_Fun_misc("sopa.de.pasta_num_times_consume")
+Poisson_ME_Fun_misc("aciete.vegetal_num_times_consume")
+Poisson_ME_Fun_misc("bebidas.alcoholicas_num_times_consume")
+Poisson_ME_Fun_misc("cereales.de.caja_num_times_consume")
+
+LPM_ME_Fun_misc("azucar")
+LPM_ME_Fun_misc("cafe")
+LPM_ME_Fun_misc("refrescos")
+LPM_ME_Fun_misc("sopa.de.pasta")
+LPM_ME_Fun_misc("aciete.vegetal")
+LPM_ME_Fun_misc("bebidas.alcoholicas")
+LPM_ME_Fun_misc("cereales.de.caja")
+
+
+# (E) Accuracy Test
+accuracy_test_fun <- function(food_name){
+  i <- which(colnames(final.df) == food_name)
+  p1 <- lm(final.df[,i] ~ treatment_dummy_num + wavenumber + I(treatment_dummy_num*wave2) + I(treatment_dummy_num*wave3) +
+             hh_log_wages + hh_kids + hh_young_kids + 
+             chicken.price_hybrid +
+             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
+             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
+             milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid,
+           data = final.df)
+  return(p1$coefficients[3])
+}
+
+
+
+
+
+
+# Chapter 8: Accuracy Test Diff-in-Diffs ####
+
+
+final.df.subset <- subset(final.df, final.df$wavenumber < 3)
+
+DiD_food_impact_fun <- function(food_name){
+  i <- which(colnames(final.df) == food_name)
+  print(i)
+  p1 <- lm(final.df.subset[,i] ~ wavenumber + treatment_household + I(treatment_household*wavenumber) + mpio + hh_log_wages + hh_kids + hh_young_kids + 
+             chicken.price_hybrid +
+             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
+             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
+             # orange.price_hybrid + apple.price_hybrid + lime.price_hybrid +
+             milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid ,
+             data = final.df.subset) 
+  return(summary(p1))
+}
+
+DiD_food_impact_fun("pollo")
+DiD_food_impact_fun("leche")
+DiD_food_impact_fun("huevos")
+DiD_food_impact_fun("carne.de.res.o.puerco")
