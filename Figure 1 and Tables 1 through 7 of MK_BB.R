@@ -13,13 +13,14 @@
 # Chapter 5: Estimating BP for each HH and generating Figure 1
 # Chapter 6: Table 7
 
-# 7/27/2018 Adding in the tables for 
+# 7/27/2018 Adding in the tables for SE breakdowns. 1 for market earnings and 1 for transfers
 
+setwd("C:/Users/mjklein2/Desktop/toot/Programming_Directory")
 rm(list=ls())
 library("sampleSelection")
 library("lfe")
 library("glmmML")
-library("plyr")
+library("tidyverse")
 
 # Chapter 1: Functions ####
 
@@ -842,3 +843,42 @@ DiD_food_impact_fun("pollo")
 DiD_food_impact_fun("leche")
 DiD_food_impact_fun("huevos")
 DiD_food_impact_fun("carne.de.res.o.puerco")
+
+
+# Chapter 9: Market Earnings Breakdown Table
+
+# Step 0: Verify that the primary employment and the other income source variables are the same across waves
+# step 1: recitfy differences between the other income source variables. They added a few options in the later two waves
+# Step 2: use the count function to get a count for each
+
+
+employment_and_sex.df <-  sample.analog %>%
+  filter(age %in% c(16:70)) %>%
+  group_by(sex) %>% 
+  count(primary_employment) %>%
+  spread(key = sex, value = n) %>% 
+  View()
+
+other_employment_1_and_sex.df <-  sample.analog %>% 
+  filter(age %in% c(16:70)) %>%
+  group_by(sex) %>% 
+  count(other_income_source) %>% 
+  spread(key = sex, value = n) %>%
+  View()
+
+other_employment_2_and_sex.df <-  sample.analog %>% 
+  filter(age %in% c(16:70)) %>%
+  group_by(sex) %>% 
+  count(other_income_source2) %>% 
+  spread(key = sex, value = n) %>% 
+  View()
+
+
+str(sample.analog$other_income_source)
+
+table(sample.analog$primary_employment[sample.analog$sex == 1 & sample.analog$age %in% c(16:70)])
+table(sample.analog$other_income_source[sample.analog$sex == 1 & sample.analog$age %in% c(16:70)])
+table(sample.analog$other_income_source2[sample.analog$sex == 1 & sample.analog$age %in% c(16:70)])
+
+
+
