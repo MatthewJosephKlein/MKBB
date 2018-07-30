@@ -845,7 +845,7 @@ DiD_food_impact_fun("huevos")
 DiD_food_impact_fun("carne.de.res.o.puerco")
 
 
-# Chapter 9: Market Earnings Breakdown Table
+# Chapter 9: Market Earnings Breakdown Table ####
 
 # Step 0: Verify that the primary employment and the other income source variables are the same across waves
 # step 1: recitfy differences between the other income source variables. They added a few options in the later two waves
@@ -902,32 +902,146 @@ sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 &
 #Visualize
 table(sample.analog$corrected_other_income_source_1, sample.analog$sex)
 
-sample.analog$other_income_source <- as.factor(sample.analog$other_income_source)
-levels(sample.analog$other_income_source) <- c("TOOTSOOTSOTOSOTOSTOTOSTs")
+# Repeat for the tertiary income source: 
+sample.analog$corrected_other_income_source_2 <- sample.analog$other_income_source2
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 2  &
+                                                sample.analog$other_income_source2 == 6] <- 15
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source2 == 7] <- 16
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 2  &
+                                                sample.analog$other_income_source2 == 8] <- 6
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source2 == 9] <- 7
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source2 == 10] <- 8
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source2 == 11] <- 9
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source2 == 12] <- 10
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 2 &
+                                                sample.analog$other_income_source2 == 13] <- 11
 
-employment_and_sex.df <-  sample.analog %>%
-  filter(age %in% c(16:70)) %>%
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 1] <- 17
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 2] <- 1
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 3] <- 2
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 4] <- 3
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 5] <- 4
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 6] <- 5
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 7] <- 15
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 8] <- 16
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 9] <- 6
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 10] <- 7
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 11] <- 8
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 12] <- 9
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 13] <- 10
+sample.analog$corrected_other_income_source_2[sample.analog$wavenumber == 3 & 
+                                                sample.analog$other_income_source2 == 14] <- 11
+
+
+employment_and_sex_97.df <-  sample.analog %>%
+  filter(age %in% c(16:70), wavenumber == 1) %>%
   group_by(sex) %>% 
   count(primary_employment) %>%
-  spread(key = sex, value = n) %>% 
-  View()
+  spread(key = sex, value = n)
+colnames(employment_and_sex_97.df) <- c("Type", "Men", "Women")
+employment_and_sex_97.df$wavenumber <- 1
+
+employment_and_sex_97.df$Men <- employment_and_sex_97.df$Men / sum(employment_and_sex_97.df$Men)*100
+employment_and_sex_97.df$Women <- employment_and_sex_97.df$Women / sum(employment_and_sex_97.df$Women)*100
+
+employment_and_sex_99.df <-  sample.analog %>%
+  filter(age %in% c(16:70), wavenumber == 2) %>%
+  group_by(sex) %>% 
+  count(primary_employment) %>%
+  spread(key = sex, value = n)
+colnames(employment_and_sex_99.df) <- c("Type", "Men", "Women")
+employment_and_sex_99.df$wavenumber <- 2
+employment_and_sex_99.df$Type[is.na(employment_and_sex_99.df$Type)] <- "Unemployed"
+
+employment_and_sex_99.df$Men <- employment_and_sex_99.df$Men / sum(employment_and_sex_99.df$Men)*100
+employment_and_sex_99.df$Women <- employment_and_sex_99.df$Women / sum(employment_and_sex_99.df$Women, na.rm=T)*100
+
+employment_and_sex_00.df <-  sample.analog %>%
+  filter(age %in% c(16:70), wavenumber == 3) %>%
+  group_by(sex) %>% 
+  count(primary_employment) %>% 
+  spread(key = sex, value = n)
+colnames(employment_and_sex_00.df) <- c("Type", "Men", "Women")
+employment_and_sex_00.df$wavenumber <- 3
+
+employment_and_sex_00.df$Men <- employment_and_sex_00.df$Men / sum(employment_and_sex_00.df$Men)*100
+employment_and_sex_00.df$Women <- employment_and_sex_00.df$Women / sum(employment_and_sex_00.df$Women, na.rm=T)*100
+
+
+employment_and_sex_97.df$Type <- c("Ejiditario", "Ag. Laborer", "Cooperative Member", "NR3", "Non-Ag. Laborer", "Other", 
+                                "Manager", "Family Work (No Pay)", "Entreprenuer", "Work (No Pay)", "Unemployed" )
+
+employment_and_sex_99.df$Type <- c("Ejiditario", "Ag. Laborer", "Cooperative Member", "NR3", "Non-Ag. Laborer", "Other", 
+                                   "Manager", "Family Work (No Pay)", "Entreprenuer", "Work (No Pay)", "Unemployed" )
+
+
+employment_and_sex_00.df$Type <- c("Ejiditario", "Ag. Laborer", "Cooperative Member", "NR3", "Non-Ag. Laborer", "Other", 
+                                   "Manager", "Family Work (No Pay)", "Entreprenuer", "Work (No Pay)", "Unemployed" )
+
+employment_and_sex.df <- bind_rows(employment_and_sex_97.df, employment_and_sex_99.df, employment_and_sex_00.df)
+employment_and_sex.df$Men <- round(employment_and_sex.df$Men, digits = 1)
+employment_and_sex.df$Women <- round(employment_and_sex.df$Women, digits = 1)
+
+stargazer::stargazer(employment_and_sex.df, summary=F)
 
 other_employment_1_and_sex.df <-  sample.analog %>% 
   filter(age %in% c(16:70)) %>%
   group_by(sex) %>% 
-  count(corrected_other_income_source_1) %>% 
-  spread(key = sex, value = n) %>%
-  View()
+  count(corrected_other_income_source_1, wavenumber) %>% 
+  spread(key = sex, value = n) 
+
+colnames(other_employment_1_and_sex.df) <- c("Type", "wavenumber", "Men", "Women")
+
+other_income_total$Type[other_income_total$Type == 0] <- "NR"
+other_income_total$Type[other_income_total$Type == 1] <- "Additional Job"
+other_income_total$Type[other_income_total$Type == 2] <- "Additional Job"
+
+#"", "Pension", "Disability Payment", "Money from Neighbors", "Property Rents", "Procampo", "Scholarship", "Bank Interst", 
+#                             "Sold Products", "Other Transfer", "None", "No Response2", "Gov Credit Program", "Unemployment", "Second Entreprenuer Venture")
+
+
 
 other_employment_2_and_sex.df <-  sample.analog %>% 
   filter(age %in% c(16:70)) %>%
   group_by(sex) %>% 
-  count(other_income_source2) %>% 
-  spread(key = sex, value = n) %>% 
-  View()
+  count(corrected_other_income_source_2, wavenumber) %>% 
+  spread(key = sex, value = n) 
+
+colnames(other_employment_2_and_sex.df) <- c("Type", "wavenumber", "Men", "Women")
 
 
-str(sample.analog$other_income_source)
+other_income_total <- as.data.frame(cbind(other_employment_2_and_sex.df$Type,
+                            other_employment_2_and_sex.df$Men + other_employment_1_and_sex.df$Men,
+                            other_employment_2_and_sex.df$Women + other_employment_1_and_sex.df$Women))
+
+colnames(other_income_total) <- c("Type", "Men", "Women")
+other_income_total$Type <- c("NR", "Additional Job", "Pension", "Disability Payment", "Money from Neighbors", "Property Rents", "Procampo", "Scholarship", "Bank Interst", 
+                                 "Sold Products", "Other Transfer", "None", "No Response2", "Gov Credit Program", "Unemployment", "Second Entreprenuer Venture")
+
+income_sources <- bind_rows(employment_and_sex.df, other_income_total)
+
+income_sources <- filter(income_sources, !(Type %in% c("NR3", "NA", "NR", "None", "No Response2", "Unemployment")))
+
+stargazer::stargazer(income_sources, summary = F, digits = 3)
+
 
 mean(sample.analog$otherincomeval1[sample.analog$corrected_other_income_source_1 == 6  &
                                      sample.analog$sex == 0 ], na.rm=T)
