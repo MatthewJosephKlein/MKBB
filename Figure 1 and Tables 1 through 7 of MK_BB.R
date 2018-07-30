@@ -1002,6 +1002,15 @@ employment_and_sex.df$Women <- round(employment_and_sex.df$Women, digits = 1)
 
 stargazer::stargazer(employment_and_sex.df, summary=F)
 
+filter(hh.df, age %in% c(16:70)) %>% count(sex, wavenumber)
+
+#Table_2_Panel_A_Means <- filter(hh.df, age %in% c(16:70)) %>% summarize(ag_wages_men_1997 = mean(income_sources)
+#                                                                        )
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# -- Other Employment 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 other_employment_1_and_sex.df <-  sample.analog %>% 
   filter(age %in% c(16:70)) %>%
   group_by(sex) %>% 
@@ -1010,14 +1019,11 @@ other_employment_1_and_sex.df <-  sample.analog %>%
 
 colnames(other_employment_1_and_sex.df) <- c("Type", "wavenumber", "Men", "Women")
 
-other_income_total$Type[other_income_total$Type == 0] <- "NR"
-other_income_total$Type[other_income_total$Type == 1] <- "Additional Job"
-other_income_total$Type[other_income_total$Type == 2] <- "Additional Job"
-
-#"", "Pension", "Disability Payment", "Money from Neighbors", "Property Rents", "Procampo", "Scholarship", "Bank Interst", 
-#                             "Sold Products", "Other Transfer", "None", "No Response2", "Gov Credit Program", "Unemployment", "Second Entreprenuer Venture")
-
-
+# Convert to Percentages
+other_employment_1_and_sex.df$Men <- round(other_employment_1_and_sex.df$Men / 
+  sum(other_employment_1_and_sex.df$Men)*100, digits = 2)
+other_employment_1_and_sex.df$Women <- round(other_employment_1_and_sex.df$Women / 
+  sum(other_employment_1_and_sex.df$Women, na.rm=T)*100, digits = 2)
 
 other_employment_2_and_sex.df <-  sample.analog %>% 
   filter(age %in% c(16:70)) %>%
@@ -1028,9 +1034,15 @@ other_employment_2_and_sex.df <-  sample.analog %>%
 colnames(other_employment_2_and_sex.df) <- c("Type", "wavenumber", "Men", "Women")
 
 
-other_income_total <- as.data.frame(cbind(other_employment_2_and_sex.df$Type,
-                            other_employment_2_and_sex.df$Men + other_employment_1_and_sex.df$Men,
-                            other_employment_2_and_sex.df$Women + other_employment_1_and_sex.df$Women))
+other_income_total <- merge(other_employment_1_and_sex.df, other_employment_2_and_sex.df, by = c("Type", "wavenumber") )
+
+other_income_total$Type[other_income_total$Type == 0] <- "NR"
+other_income_total$Type[other_income_total$Type == 1] <- "Additional Job"
+other_income_total$Type[other_income_total$Type == 2] <- "Additional Job"
+
+#"", "Pension", "Disability Payment", "Money from Neighbors", "Property Rents", "Procampo", "Scholarship", "Bank Interst", 
+#                             "Sold Products", "Other Transfer", "None", "No Response2", "Gov Credit Program", "Unemployment", "Second Entreprenuer Venture")
+
 
 colnames(other_income_total) <- c("Type", "Men", "Women")
 other_income_total$Type <- c("NR", "Additional Job", "Pension", "Disability Payment", "Money from Neighbors", "Property Rents", "Procampo", "Scholarship", "Bank Interst", 
@@ -1041,6 +1053,13 @@ income_sources <- bind_rows(employment_and_sex.df, other_income_total)
 income_sources <- filter(income_sources, !(Type %in% c("NR3", "NA", "NR", "None", "No Response2", "Unemployment")))
 
 stargazer::stargazer(income_sources, summary = F, digits = 3)
+
+
+# And Progresa:
+filter(hh.df, age %in% c(16:70), sex == 1, head_dummy == 1, wavenumber ==2) %>% count(treatment_household)
+filter(hh.df, age %in% c(16:70), sex == 1, head_dummy == 1, wavenumber ==3) %>% count(treatment_household)
+filter(hh.df, age %in% c(16:70), wavenumber ==2) %>% count(sex)
+filter(hh.df, age %in% c(16:70), wavenumber ==3) %>% count(sex)
 
 
 mean(sample.analog$otherincomeval1[sample.analog$corrected_other_income_source_1 == 6  &
