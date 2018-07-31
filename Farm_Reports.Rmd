@@ -1,0 +1,88 @@
+---
+title: "Farmer Profit Reports"
+author: "Bradford Barham, John Hendrickson, Franklin Egan, and Matthew Klein"
+date: "July 31, 2018"
+output: word_document
+param: 
+  farm_number: farm_number
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction 
+	
+The goal of this report is to provide you a summary view of the basic financial performance of your vegetable enterprise in comparison with other similar farmers. It is the first written product of a larger study that explores the factors shaping the performance of highly diversified multi-crop vegetable farms. It uses some of the information from an 'on-line' survey that you filled out based on your financial records. 
+
+**This report is personalized.** Because at times it includes direct comparisons between your financial outcomes and averages of other farmers, this is the only copy of the report we printed. The electronic file is secured on a restricted-access server at the Department of Agricultural and Applied Economics at the University of Wisconsin-Madison, with a code that does not include your personal identifiers.
+
+To date, we have received about 100 farm surveys from about 80 farmers, as some provided data for multiple years. About 60 of the farms are from Wisconsin. The rest are from Pennsylvania. All respondents were primarily vegetable farmers, with about 90% of their gross revenues coming from vegetable sales. The average Wisconsin farm had 4 acres in vegetables, while the average Pennsylvania farm had 6 acres.
+
+Likewise, most of the farmers were engaged in multiple marketing channels, such as farmers' markets, Community Supported Agriculture (CSA), direct wholesale arrangements, and the like. In both states, about half of the sample farms earned more than 50% of their revenues from CSA sales, while 25% earned more than half from Farmers Markets. The rest were in other categories, especially one we call balanced when no single marketing channel provided more than half of the farm revenues. The similarities across the states in terms of farm size and marketing channels help in the ensuing comparisons.
+
+This report exploits all of the usable data. The small sample size reduces our capacity for analyzing statistical significance, especially when we create categories based on a farm's principal marketing channel. It also means that sometimes we compare the farms by size categories, specifically those under and over $100,000 in annual revenues. Nonetheless, the data allow for some interesting and useful comparisons. We have also personalized the report to make it as useful as possible. Of course, follow-up questions are welcome.
+
+## Design of the Report
+
+In the Appendix, Tables A1 and A2 provide a summary of the eight measures utilized in this report. We introduce them one-by-one below, with a separate header, and present your farm's measure in comparison with other farms immediately below the definition. The first four are 'simple ratios', such as gross vegetable sales per acre. The next four are conventional financial measures used in farm-level economic analyses, such as net income to farm revenue. Along the way, we provide some summary remarks. After presenting all eight, we close the report with a short discussion on the farm's overall financial performance.
+
+## Gross Vegetable Sales Revenue Per Acre
+
+This first measure is an indicator of the intensity of the operation; it shows how much revenue your vegetable enterprise generates per acre.
+
+```{r echo=F}
+folder_name <- paste0("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Farm_Reports/", farm_number)
+knitr::include_graphics(paste0(folder_name, "/", "Figure_1.png"))
+```
+
+**Personalized Content**
+
+
+## Net Income per Acre
+
+This next measure takes the total farm revenue generated from vegetable sales and then subtracts off the cash operating expenses associated with the vegetable enterprise including hired labor to generate a measure of net income. The net income portion of the measure does not account for unpaid family labor or 'returns' to other factors, such as equipment or own land. Dividing the net income measure by acres provides another measure of the intensity of the operation.
+
+```{r echo=F}
+folder_name <- paste0("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Farm_Reports/", farm_number)
+knitr::include_graphics(paste0(folder_name, "/", "Figure_2.png"))
+```
+
+**Personalized Content**
+
+## Full-Time Equivalent Labor per Acre (FTE/Acre)
+
+FTE/ACRE is a measure of the labor intensity of a farm that combines all workers employed on the farm in the vegetable enterprise into an FTE equivalent based on 2000 hours per year, and then divides that count measure by the number of vegetable acres.
+
+```{r echo=F}
+folder_name <- paste0("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Farm_Reports/", farm_number)
+knitr::include_graphics(paste0(folder_name, "/", "Figure_3.png"))
+```
+
+
+```{r echo = FALSE, warning=FALSE, message=FALSE}
+folder_name <- paste0("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Farm_Reports/", farm_number)
+setwd(folder_name)
+Table_2 <- readr::read_csv("Table_2.csv")
+colnames(Table_2)[1:2] <- c("", "")
+Table_2 <- Table_2[,2:6]
+knitr::kable(Table_2, digits=2)
+```
+
+
+Content 
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+```{r echo = FALSE, warning=FALSE, message=FALSE}
+folder_name <- paste0("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Farm_Reports/", farm_number)
+setwd(folder_name)
+Table_3 <- readr::read_csv("Table_3.csv")
+colnames(Table_3)[1:2] <- c("", "")
+Table_3 <- Table_3[,2:6]
+knitr::kable(Table_3, digits=2)
+```
+
+
+
