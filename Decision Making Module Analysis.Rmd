@@ -1,0 +1,388 @@
+---
+title: "DecisionMakingModuleAnalysis"
+author: "MK"
+date: "August 14, 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Preliminary Data Cleaning and Notes
+
+This project is supposed to generate the analysis for the Appendix of MKBB, where we analyze the relationship between decision-making questionaire responses, and our measure of BP. It is not clear what the results will be as the relationship between BP and empowerment is not clear. We will also analyze the relationship between our variable and private assignable goods, and 
+
+The first step is to incorporate the decision making variables into the analysis. These (following Adato et al. 2000) include: 
+
+  1. taking the child for medical attention, 
+  2. telling the child to go to school, 
+  3. giving the child permission to leave the house,
+  4. expenditures on child clothing, 
+  5. food expenditures, 
+  6. house repairs, 
+  7. durables purchases, and 
+  8. decisions regarding the use of women's extra income. 
+
+These variables can be found in March of 1998 (the baseline), and two waves we currently are not using: 1998 O and 1999 M. 
+
+The private assignable goods can be found in March of 1998 (the baseline),  November of 1999, and November 2000. These include: 
+
+  1. Land,
+  2. Small Livestock
+  3. Large Livestock
+  4. Boy\'s, girl\'s, men\'s, and women\'s shoes & Shoes(included)
+
+For land, we also need to do some cleaning to assign the property to someone. Land and titles exists in October of 1998, and     
+
+```{r echo = FALSE, include = FALSE, warnings = FALSE, cache=TRUE}
+rm(list=ls())
+setwd("C:/Users/mjklein2/Desktop/toot/Programming_Directory")
+
+library("foreign")
+library("sampleSelection")
+library("tidyverse")
+
+load("hh.df.Rda") # This data.frame is generated in "Final Cleaning for Master Panel Construction.R"
+hh98.df <- read.spss('socioec_encel_98m.sav', use.value.labels = FALSE, to.data.frame = TRUE)
+hh99m.df <- read.spss('socioec_encel_99m.sav', use.value.labels = FALSE, to.data.frame = TRUE)
+#hh00.df <- read.spss('socioec_encel_2000n.sav', use.value.labels = FALSE, to.data.frame = TRUE)
+
+# In this pipe, we select the columns we want from hh98.df, then we aggregate the information to the HH level 
+# Rename the columns at the same time.
+sub.98 <- hh98.df %>% 
+  select(folio, p05003, p05004, p05005, p05006, p05007, p05008, p05009, p05010, p127, p128, p129, p130, p131, p132, p133, p13401, p13402, p13403)  %>%
+  group_by(folio) %>%  # This command aggregates all of the following variables and renames them
+  summarize(DM_who_tells_sick_kid = mean(p127, na.rm=T),
+            DM_tells_kid_school = mean(p128, na.rm=T),
+            DM_spend_women_income = mean(p129, na.rm=T),
+            DM_HH_fix_expenditures = mean(p130, na.rm=T),
+            DM_buy_kids_shoes = mean(p131, na.rm=T),
+            DM_control_small_livestock = mean(p132, na.rm=T),
+            DM_decides_garden = mean(p133, na.rm=T),
+            DM_allowed_visit_parents = mean(p13401, na.rm=T), 
+            DM_allowed_visit_friends = mean(p13401, na.rm=T),
+            DM_not_allowed_visit = mean(p13401, na.rm=T), 
+            PAG_girls_clothing = mean(p05003, na.rm=T),
+            PAG_boys_clothing = mean(p05004, na.rm=T),
+            PAG_womens_clothing = mean(p05005, na.rm=T),
+            PAG_mens_clothing = mean(p05006, na.rm=T),
+            PAG_girls_shoes = mean(p05007, na.rm=T),
+            PAG_boys_shoes = mean(p05008, na.rm=T),
+            PAG_womens_shoes = mean(p05009, na.rm=T),
+            PAG_mens_shoes = mean(p05010, na.rm=T))                                   
+
+sub.98$wavenumber <- rep(1)
+
+#sub.98.land <- hh98.df %>% select()
+
+sub.99 <- hh99m.df %>% 
+  select(folio, m10904, m10905, m11001, m11002, m11003, m11004, m11005, m11006, m137, m138, m139, m140, m141, m142, m143, m144)  %>%
+  group_by(folio) %>%  # This command aggregates all of the following variables and renames them
+  summarize(DM_who_tells_sick_kid = mean(m137, na.rm=T),
+            DM_tells_kid_school = mean(m138, na.rm=T),
+            DM_kids_leave_house = mean(m139, na.rm=T),
+            DM_buy_kids_shoes = mean(m140, na.rm=T),
+            DM_buy_food = mean(m141, na.rm=T),
+            DM_HH_fix_expenditures = mean(m142, na.rm=T),
+            DM_HH_durable_purchase = mean(m143, na.rm=T),
+            DM_spend_women_income = mean(m144, na.rm=T), 
+            PAG_girls_clothing = mean(m10904, na.rm=T),
+            PAG_boys_clothing = mean(m10905, na.rm=T),
+            PAG_womens_clothing = mean(m11001, na.rm=T),
+            PAG_mens_clothing = mean(m11002, na.rm=T),
+            PAG_girls_shoes = mean(m11003, na.rm=T),
+            PAG_boys_shoes = mean(m11004, na.rm=T),
+            PAG_womens_shoes = mean(m11005, na.rm=T),
+            PAG_mens_shoes = mean(m11006, na.rm=T))    
+
+sub.99$wavenumber <- rep(3)
+
+sub <- bind_rows(sub.98, sub.99)
+
+hh.df <- left_join(hh.df, sub, by = c("folio", "wavenumber"))
+
+# Making a total HH size variable
+
+hh.size <- hh.df %>% group_by(wavenumber) %>% count(folio) 
+colnames(hh.size) <- c("wavenumber", "folio", "hh_size")
+
+hh.df <- left_join(hh.df, hh.size, by = c("folio", "wavenumber"))
+
+```
+
+
+So we've read the data in and updated our dataframes to include the decision making variables. Now the next step is to run the code to generate the BP variable and get our data at the household level. 
+
+```{r, echp = F, include = F, warnings = F, cache=TRUE}
+# First, calculate BP for each household. 
+# Chapter 1: Functions ####
+
+# Update so that the code here runs again, need to do b/c we cache this code typically and must update when upstream options changes: 2
+
+temp.df <- aggregate(hh.df$progresa_income_total[hh.df$wavenumber==2], 
+                     by =list(hh.df$folio[hh.df$wavenumber==2]), FUN=mean, na.rm=T)
+colnames(temp.df) <- c("folio", "progresa_income_total_in_period_2")
+temp.df$treatment_household <- rep(0)
+temp.df$treatment_household[temp.df$progresa_income_total_in_period_2>0] <- 1
+#summary(temp.df)
+
+hh.df <- merge(hh.df, temp.df, by = c("folio"))
+
+# A) BP Function (Hyp 1)
+#    A.1) Shadow Earnings function
+# B) LPM.Marginal.Fun (Hyp 2, 3)
+# C) LPM.Marginal.Fun.Comparison (Hyp 4)
+# D) Poisson.Marginal.Fun (Hyp 2)
+# E) Generate the analog
+
+# (A.1) Shadow Earnings (SE) Function 
+SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
+  data.df <- subset(sample.analog,  sample.analog$age > 15 & sample.analog$sex == gender_number &  sample.analog$age <= 70)
+  
+  selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+    number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+    as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
+    ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
+    proportion_need_permission + proportion_need_accompany  
+  
+  outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+    number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy    
+  
+  if(gender_number == 1){  
+    
+    selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+      as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
+      ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
+      proportion_need_permission + proportion_need_accompany + progresa_income_mom
+    
+    outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+      I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy  +  progresa_income_mom    # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
+    
+  }
+  
+  reg <- selection(selection_formula, outcome_formula, data = data.df, method = "ml")
+  summary(reg)
+  # stargazer::stargazer(reg$probit, reg1$probit, omit = c("year_wave_FE"), single.row = T)
+  # Have to generate the fitted values by hand since the canned packages aren't calculating the values for NA's.
+  
+  coefs <- matrix(as.numeric(reg$estimate[55:length(reg$estimate)-2]), ncol = 1)
+  
+  if(gender_number==1){
+    coefs <- matrix(as.numeric(reg$estimate[56:length(reg$estimate)-2]), ncol = 1)
+  }
+  
+  X <- model.matrix(outcome_formula, model.frame(outcome_formula, data.df, na.action = na.pass)) # Thanks, Travis, for the idea
+  
+  y_hat <- exp(X%*%coefs)
+  y_hat.df <- as.data.frame(cbind(data.df$folio, data.df$ind_ID, data.df$wavenumber, y_hat))
+  return(y_hat.df)
+}
+
+# hh.df <- subset(hh.df, hh.df$folio != 170466)
+
+# (A.2) BP Function 
+BP.Fun <- function(){ #Calls shadow wage function
+  
+  #Step 1: Call the SW function
+  y_hat_men_combined <- unique(SE.Fun(gender_number = 0)) # "_Combined" references the fact that all years are used in estimation
+  y_hat_women_combined <- unique(SE.Fun(gender_number = 1))
+  names(y_hat_men_combined) <- c("folio", "ind_ID", "wavenumber", "y_hat_men_combined") 
+  names(y_hat_women_combined) <- c("folio", "ind_ID", "wavenumber", "y_hat_women_combined")
+  
+  #step 2: Merging it into the sample analog. DO NOT DELETE THE LINES THAT CONVERT NA's TO 0's.
+  sample.analog <- merge(sample.analog, y_hat_women_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
+  sample.analog$y_hat_women_combined[is.na(sample.analog$y_hat_women_combined)] <- 0
+  sample.analog <- merge(sample.analog, y_hat_men_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
+  sample.analog$y_hat_men_combined[is.na(sample.analog$y_hat_men_combined)] <- 0
+  
+  #Step 3: In steps 1 and 2, every person in the HH has an estimated outside option / shadow earnings. We need to just have the mom and dad. 
+  sample.analog$Mom_SW_combined_a <- sample.analog$y_hat_women_combined * sample.analog$head_dummy
+  Mom_SW_combined.df <- aggregate(sample.analog$Mom_SW_combined_a, by = list(Category=sample.analog$folio), FUN=sum)
+  names(Mom_SW_combined.df) <- c("folio", "Mom_SW_combined")
+  sample.analog <- merge(sample.analog, Mom_SW_combined.df, by = "folio")
+  
+  sample.analog$Dad_SW_combined_a <- sample.analog$y_hat_men_combined * sample.analog$head_dummy
+  Dad_SW_combined.df <- aggregate(sample.analog$Dad_SW_combined_a, by = list(Category=sample.analog$folio), FUN=sum)
+  names(Dad_SW_combined.df) <- c("folio", "Dad_SW_combined")
+  sample.analog <- merge(sample.analog, Dad_SW_combined.df, by = "folio")
+  
+  #Step 4: Generating the relative shadow earnings BP Proxy
+  
+  #BP = (\hat{E}_f + T_f) / (\hat{E}_f + T_f + \hat{E}_m + T_m)
+  
+  sample.analog$BP[sample.analog$wave1 == 1] <- (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
+                                                   sample.analog$T_mom_total[sample.analog$wavenumber == 1] )  / 
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
+       sample.analog$T_mom_total[sample.analog$wavenumber == 1] +
+       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
+       sample.analog$T_dad_total[sample.analog$wavenumber == 1])
+  
+  sample.analog$BP[sample.analog$wavenumber == 2] <- 
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
+       sample.analog$T_mom_total[sample.analog$wavenumber == 2])  /
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] +
+       sample.analog$T_mom_total[sample.analog$wavenumber == 2] + 
+       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
+       sample.analog$T_dad_total[sample.analog$wavenumber == 2])
+  
+  sample.analog$BP[sample.analog$wavenumber == 3] <- 
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] + 
+       sample.analog$T_mom_total[sample.analog$wavenumber == 3])  /
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] +
+       sample.analog$T_mom_total[sample.analog$wavenumber == 3] + 
+       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
+       sample.analog$T_dad_total[sample.analog$wavenumber == 3])
+  
+  
+  t1 <- t.test(sample.analog$BP[sample.analog$wave2 == 1 & sample.analog$treatment_dummy == "Basal"], 
+               sample.analog$BP[sample.analog$wave1 == 1 & sample.analog$treatment_dummy == "Basal"])
+  t2 <-  t.test(sample.analog$BP[sample.analog$wave2 == 1 & sample.analog$treatment_dummy == "Control"], 
+                sample.analog$BP[sample.analog$wave1 == 1 & sample.analog$treatment_dummy == "Control"])
+  
+  return(list(sample.analog, t1$statistic, t2$statistic, 
+              mean(sample.analog$BP[sample.analog$wave1 == 1], na.rm = T), 
+              mean(sample.analog$BP[sample.analog$wave2 == 1], na.rm = T),
+              mean(sample.analog$BP[sample.analog$wave3 == 1], na.rm = T)))  
+} 
+
+
+# Chapter 1.b: Generating the BP values and Final.df #####
+
+sample.analog <- hh.df 
+
+BP.Fun.Results <- BP.Fun()
+sample.analog <- BP.Fun.Results[[1]]
+
+
+# making a matrix of just the HH level variables: 
+final.df <- aggregate(sample.analog$BP, by = list(sample.analog$folio, sample.analog$wavenumber), FUN=mean, na.rm=T)
+colnames(final.df) <- c("folio", "wavenumber", "BP")
+
+final.df <- unique(merge(sample.analog[,c("folio", "wavenumber", "loc_id", "unique_loc_id", "hh_log_wages" , "hh_kids" , "hh_young_kids" , "hh_size",
+                                          "progresa_income_total","wave2", "wave3", "treatment_dummy_num", "seven_states", "mpio", 
+                                          "accompanied", "need_permission", "AD_women_in_home",
+                                          "AD_obedience", "AD_say_comm", "AD_women_job", "AD_equal_rights", "AD_women_opinions",
+                                          "treatment_dummy", "treatment_household", 
+                                           "DM_tells_kid_school", "DM_spend_women_income",
+                                "DM_HH_fix_expenditures", "DM_buy_kids_shoes", "DM_who_tells_sick_kid",
+                                "DM_control_small_livestock", "DM_decides_garden",
+                                "DM_allowed_visit_parents", "DM_allowed_visit_friends",
+                                "DM_not_allowed_visit",  "PAG_girls_clothing" ,
+            "PAG_boys_clothing", "PAG_womens_clothing",  "PAG_mens_clothing",
+            "PAG_girls_shoes", "PAG_boys_shoes",
+            "PAG_womens_shoes", "PAG_mens_shoes")], final.df, by =   c("folio", "wavenumber")))
+
+
+
+```
+
+# Decision Making Module Preliminary Regression Results
+
+```{r echo = F}
+final.df$AD_equal_rights[final.df$AD_equal_rights != 1] <- 0
+final.df$AD_women_in_home[final.df$AD_women_in_home != 1] <- 0
+final.df$AD_obedience[final.df$AD_obedience != 1] <- 0
+final.df$AD_say_comm[final.df$AD_say_comm != 1] <- 0
+final.df$AD_women_opinions[final.df$AD_equal_rights != 1] <- 0
+final.df$AD_women_job[final.df$AD_women_job != 1] <- 0
+
+# Dummify
+# 1  
+  final.df$DM_HH_fix_expenditures[final.df$DM_HH_fix_expenditures != 2] <- 0
+  final.df$DM_HH_fix_expenditures[final.df$DM_HH_fix_expenditures == 2] <- 1 
+ 
+  final.df$DM_tells_kid_school[final.df$DM_tells_kid_school != 2] <- 0
+  final.df$DM_tells_kid_school[final.df$DM_tells_kid_school == 2] <- 1 
+
+  final.df$DM_buy_kids_shoes[final.df$DM_buy_kids_shoes != 2] <- 0
+  final.df$DM_buy_kids_shoes[final.df$DM_buy_kids_shoes == 2] <- 1 
+  
+  final.df$DM_control_small_livestock[final.df$DM_control_small_livestock != 2] <- 0
+  final.df$DM_control_small_livestock[final.df$DM_control_small_livestock == 2] <- 1 
+  
+  final.df$DM_decides_garden[final.df$DM_decides_garden != 2] <- 0
+  final.df$DM_decides_garden[final.df$DM_decides_garden == 2] <- 1
+
+  final.df$DM_spend_women_income[final.df$DM_spend_women_income != 2] <- 0
+  final.df$DM_spend_women_income[final.df$DM_spend_women_income == 2] <- 1
+  
+  final.df$DM_who_tells_sick_kid[final.df$DM_who_tells_sick_kid != 2] <- 0
+  final.df$DM_who_tells_sick_kid[final.df$DM_who_tells_sick_kid == 2] <- 1  
+  
+  final.df$DM_count <- rowSums(cbind(final.df$DM_HH_fix_expenditures, final.df$DM_tells_kid_school, 
+                                     final.df$DM_buy_kids_shoes, final.df$DM_control_small_livestock, final.df$DM_decides_garden,                                                   final.df$DM_spend_women_income, final.df$DM_who_tells_sick_kid), na.rm = T)
+  
+reg1 <-  lfe::felm(DM_buy_kids_shoes ~ BP + hh_log_wages + hh_size + hh_kids  | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+knitr::kable(xtable::xtable(summary(reg1)),  caption  = "Buying Kids Shoes")
+
+reg2 <-  lfe::felm(DM_tells_kid_school ~ BP + hh_log_wages + hh_size + hh_kids | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+reg3 <-  lfe::felm(DM_spend_women_income ~ BP + hh_log_wages + hh_size + hh_kids | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+reg4 <-  lfe::felm(DM_who_tells_sick_kid ~ BP + hh_log_wages + hh_size + hh_kids | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+
+knitr::kable(xtable::xtable(reg2), caption = "Telling Kids to Go to School")
+knitr::kable(xtable::xtable(reg3), caption = "Spending Women's Income")
+knitr::kable(xtable::xtable(reg4), caption = "Telling a sick kid to go to the doctor")
+
+knitr::kable(summary(glmmML::glmmboot(DM_count ~ BP + hh_log_wages + hh_size + hh_kids + wavenumber, cluster = unique_loc_id, data = final.df, family="poisson")))
+
+```
+
+# Agree/Disagree Preliminary Regression Results
+
+```{r echo = F}
+reg5 <-  lfe::felm(AD_women_opinions ~ BP + hh_log_wages + hh_size + hh_kids | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+reg6 <-  lfe::felm(AD_equal_rights ~ BP + hh_log_wages + hh_size + hh_kids  | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+knitr::kable(xtable::xtable(reg5), caption = "Agree that women have valid opinions")
+knitr::kable(xtable::xtable(reg6), caption = "Agree that women should have equal rights")
+
+```
+
+# Private Assignable Goods Preliminary Regression Results
+
+```{r echo = F}
+final.df$PAG_girls <-  rowSums(cbind(final.df$PAG_girls_shoes , final.df$PAG_girls_clothing), na.rm = T)
+final.df$PAG_boys <-   rowSums(cbind(final.df$PAG_boys_shoes , final.df$PAG_boys_clothing), na.rm = T)
+final.df$PAG_women <-  rowSums(cbind(final.df$PAG_womens_shoes , final.df$PAG_womens_clothing), na.rm = T)
+final.df$PAG_men <-    rowSums(cbind(final.df$PAG_mens_shoes , final.df$PAG_mens_clothing), na.rm = T)
+
+reg7 <-  lfe::felm(PAG_girls ~ BP + hh_log_wages + hh_size + hh_kids | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+reg8 <-  lfe::felm(PAG_boys ~ BP + hh_log_wages + hh_kids + hh_size  | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+reg9 <-  lfe::felm(PAG_women  ~ BP + hh_log_wages + hh_size + hh_kids  | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+reg10 <-  lfe::felm(PAG_men ~ BP + hh_log_wages + hh_size + hh_kids | unique_loc_id + wavenumber | 0 | unique_loc_id, data = final.df)
+
+#stargazer::stargazer(reg7, header = FALSE, type = 'latex')
+
+knitr::kable(xtable::xtable(reg7), caption = "Amount Spent on Girl's Shoes")
+knitr::kable(xtable::xtable(reg8), caption = "Amount Spent on Boy's Shoes")
+knitr::kable(xtable::xtable(reg9), caption = "Amount Spent on Women's Shoes")
+knitr::kable(xtable::xtable(reg10), caption = "Amount Spent on Men's Shoes")
+
+dtf1 <- final.df %>% group_by(wavenumber) %>% select(BP, hh_log_wages, hh_size, PAG_girls, PAG_boys, PAG_women, PAG_men, need_permission, AD_women_in_home, AD_obedience, AD_say_comm, AD_women_job, AD_equal_rights, AD_women_opinions, DM_tells_kid_school, DM_spend_women_income, DM_HH_fix_expenditures, DM_buy_kids_shoes, 
+DM_who_tells_sick_kid,     DM_control_small_livestock,     DM_decides_garden, DM_allowed_visit_parents,                         DM_allowed_visit_friends,   DM_not_allowed_visit, wavenumber) 
+
+
+
+
+```
