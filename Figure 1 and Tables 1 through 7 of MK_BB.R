@@ -803,18 +803,18 @@ LPM_ME_Fun_misc("bebidas.alcoholicas")
 LPM_ME_Fun_misc("cereales.de.caja")
 
 
-# (E) Accuracy Test
-accuracy_test_fun <- function(food_name){
-  i <- which(colnames(final.df) == food_name)
-  p1 <- lm(final.df[,i] ~ treatment_dummy_num + wavenumber + I(treatment_dummy_num*wave2) + I(treatment_dummy_num*wave3) +
-             hh_log_wages + hh_kids + hh_young_kids + 
-             chicken.price_hybrid +
-             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
-             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
-             milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid,
-           data = final.df)
-  return(p1$coefficients[3])
-}
+# # (E) Accuracy Test
+# accuracy_test_fun <- function(food_name){
+#   i <- which(colnames(final.df) == food_name)
+#   p1 <- lm(final.df[,i] ~ treatment_dummy_num + wavenumber + I(treatment_dummy_num*wave2) + I(treatment_dummy_num*wave3) +
+#              hh_log_wages + hh_kids + hh_young_kids + 
+#              chicken.price_hybrid +
+#              beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
+#              lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
+#              milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid,
+#            data = final.df)
+#   return(p1$coefficients[3])
+# }
 
 
 
@@ -823,32 +823,30 @@ accuracy_test_fun <- function(food_name){
 
 # Chapter 8: Accuracy Test Diff-in-Diffs ####
 
-
-final.df.subset <- subset(final.df, final.df$wavenumber < 3)
-
-DiD_food_impact_fun <- function(food_name){
-  i <- which(colnames(final.df) == food_name)
-  print(i)
-  p1 <- lm(final.df.subset[,i] ~ wavenumber + treatment_household + I(treatment_household*wavenumber) + mpio + hh_log_wages + hh_kids + hh_young_kids + 
-             chicken.price_hybrid +
-             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
-             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
-             # orange.price_hybrid + apple.price_hybrid + lime.price_hybrid +
-             milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid ,
-             data = final.df.subset) 
-  return(summary(p1))
-}
-
-DiD_food_impact_fun("pollo")
-DiD_food_impact_fun("leche")
-DiD_food_impact_fun("huevos")
-DiD_food_impact_fun("carne.de.res.o.puerco")
+# 
+# final.df.subset <- subset(final.df, final.df$wavenumber < 3)
+# 
+# DiD_food_impact_fun <- function(food_name){
+#   i <- which(colnames(final.df) == food_name)
+#   print(i)
+#   p1 <- lm(final.df.subset[,i] ~ wavenumber + treatment_household + I(treatment_household*wavenumber) + mpio + hh_log_wages + hh_kids + hh_young_kids + 
+#              chicken.price_hybrid +
+#              beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
+#              lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
+#              # orange.price_hybrid + apple.price_hybrid + lime.price_hybrid +
+#              milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid ,
+#              data = final.df.subset) 
+#   return(summary(p1))
+# }
+# 
 
 
 # Chapter 9: Market Earnings Breakdown Table ####
 
-# Step 0: Verify that the primary employment and the other income source variables are the same across waves
-# step 1: recitfy differences between the other income source variables. They added a few options in the later two waves
+# Step 0: Verify that the primary employment and the other income source variables are the same 
+#         across waves
+# step 1: recitfy differences between the other income source variables. 
+#         They added a few options in the later two waves
 #         There are pretty big differences in the number system, gotta sort em
 # Step 2: use the count function to get a count for each
 
@@ -900,7 +898,7 @@ sample.analog$corrected_other_income_source_1[sample.analog$wavenumber == 3 &
                                                 sample.analog$other_income_source == 14] <- 11
 
 #Visualize
-table(sample.analog$corrected_other_income_source_1, sample.analog$sex)
+table(sample.analog$corrected_other_income_source_1, sample.analog$sex, sample.analog$wavenumber)
 
 # Repeat for the tertiary income source: 
 sample.analog$corrected_other_income_source_2 <- sample.analog$other_income_source2
@@ -959,9 +957,11 @@ employment_and_sex_97.df <-  sample.analog %>%
 colnames(employment_and_sex_97.df) <- c("Type", "Men", "Women")
 employment_and_sex_97.df$wavenumber <- 1
 
+# Make it a percent
 employment_and_sex_97.df$Men <- employment_and_sex_97.df$Men / sum(employment_and_sex_97.df$Men)*100
 employment_and_sex_97.df$Women <- employment_and_sex_97.df$Women / sum(employment_and_sex_97.df$Women)*100
 
+# Repeat for Wave 2
 employment_and_sex_99.df <-  sample.analog %>%
   filter(age %in% c(16:70), wavenumber == 2) %>%
   group_by(sex) %>% 
@@ -971,9 +971,11 @@ colnames(employment_and_sex_99.df) <- c("Type", "Men", "Women")
 employment_and_sex_99.df$wavenumber <- 2
 employment_and_sex_99.df$Type[is.na(employment_and_sex_99.df$Type)] <- "Unemployed"
 
+# Make it a percent
 employment_and_sex_99.df$Men <- employment_and_sex_99.df$Men / sum(employment_and_sex_99.df$Men)*100
 employment_and_sex_99.df$Women <- employment_and_sex_99.df$Women / sum(employment_and_sex_99.df$Women, na.rm=T)*100
 
+# Repeat for Wave 3
 employment_and_sex_00.df <-  sample.analog %>%
   filter(age %in% c(16:70), wavenumber == 3) %>%
   group_by(sex) %>% 
@@ -982,6 +984,7 @@ employment_and_sex_00.df <-  sample.analog %>%
 colnames(employment_and_sex_00.df) <- c("Type", "Men", "Women")
 employment_and_sex_00.df$wavenumber <- 3
 
+# Make it a percent
 employment_and_sex_00.df$Men <- employment_and_sex_00.df$Men / sum(employment_and_sex_00.df$Men)*100
 employment_and_sex_00.df$Women <- employment_and_sex_00.df$Women / sum(employment_and_sex_00.df$Women, na.rm=T)*100
 
@@ -1002,6 +1005,7 @@ employment_and_sex.df$Women <- round(employment_and_sex.df$Women, digits = 1)
 
 stargazer::stargazer(employment_and_sex.df, summary=F)
 
+# Count the number of men and women ages 16-70 in each wave
 filter(hh.df, age %in% c(16:70)) %>% count(sex, wavenumber)
 
 #Table_2_Panel_A_Means <- filter(hh.df, age %in% c(16:70)) %>% summarize(ag_wages_men_1997 = mean(income_sources)
@@ -1077,8 +1081,7 @@ View(other_employment_2_and_sex.df)
 
 other_income_total <- merge(other_employment_1_and_sex.df, other_employment_2_and_sex.df, by = c("Type", "wavenumber") )
 
-# "Scholarship", "Bank Interst", 
-#                              "Gov Credit Program", "Unemployment", "Second Entreprenuer Venture")
+
 other_income_total$Type[other_income_total$Type == 0] <- "NR"
 other_income_total$Type[other_income_total$Type == 1] <- "Additional Job"
 other_income_total$Type[other_income_total$Type == 2] <- "Pension"
@@ -1128,7 +1131,98 @@ mean(sample.analog$otherincomeval1[sample.analog$corrected_other_income_source_1
                                      sample.analog$sex == 1 ], na.rm=T)
 
 
+inflation_1998 <- 18.61/100
+inflation_1999 <- 12.32/100
+inflation_2000 <- 8.96/100
+
 # Adding the means to Table 2
 
-summary(hh.df$wages[hh.df$primary_employment == "Jornalero rural o peón de campo" & hh.df$sex == 1 & hh.df$wavenumber == 1])
+Table_2_market_fun <- function(wavenum, type){ # A function to generate summary stats for Table 2 in MKBB. 
+                           # This just spits out the means for the table to go in parentheses
+  a <- round(mean(hh.df$wages[hh.df$primary_employment == type & 
+                                hh.df$sex == 0 & hh.df$wavenumber == wavenum],
+                  na.rm=T), digits = 2)
+  
+  b <- round(mean(hh.df$wages[hh.df$primary_employment == type & 
+                                hh.df$sex == 1 & hh.df$wavenumber == wavenum],
+                  na.rm=T), digits = 2)
+  
+  if(wavenum == 1){
+  print(paste0("MALE ", type, " ", a))
+  print(paste0("FEMALE ", type, " ",b ))
+  }
+  
+  if(wavenum == 2){
+    print(paste0("MALE ", type, " ", round(a*(1-inflation_1998)*(1-inflation_1999), digits = 2)))
+    print(paste0("FEMALE ", type, " ",round(b*(1-inflation_1998)*(1-inflation_1999), digits = 2) ))
+  }
+  
+  if(wavenum == 3) {
+    print(paste0("MALE ", type, " ", round(a*(1-inflation_1998)*(1-inflation_1999)*
+                                             (1-inflation_2000), digits  = 2)))
+    print(paste0("FEMALE ", type, " ",round(b*(1-inflation_1998)*(1-inflation_1999)*
+                                              (1-inflation_2000), digits = 2 )))
+  }
+}
+
+
+# Use purr to pass all the elements of the list of primary employment options to Table_2_fun 
+walk(unique(hh.df$primary_employment), Table_2_market_fun, wavenum=1)
+walk(unique(hh.df$primary_employment), Table_2_market_fun, wavenum=2)
+walk(unique(hh.df$primary_employment), Table_2_market_fun, wavenum=3)
+
+Table_2_non_market_fun <- function(wavenum, type){ # A function to generate summary stats for Table 2 in MKBB. 
+  # This just spits out the means for the table to go in parentheses
+  
+  if(type ==0) print("NR")
+  if(type ==1) print("Additional Job")
+  if(type ==2) print("Pension")
+  if(type ==3) print("Disability Payment")
+  if(type ==4) print("Money from Neighbors")
+  if(type ==5) print("Property Rent")
+  if(type ==6) print("Procampo")
+  if(type ==7) print("Scholarship")
+  if(type ==8) print("Bank Interest")
+  if(type ==9) print("Sold Products")
+  if(type ==10) print("Other Transfer")
+  if(type ==11) print("None")
+  if(type ==14) print("None")
+  if(type == 15) print ("Gov Credit Program")
+  if(type == 16) print ("Second Entre Venture")
+  
+  
+  a <- round(mean(sample.analog$otherincomeval[sample.analog$corrected_other_income_source_1 == type &
+                                                 sample.analog$otherincomeval > 0 &
+                                                 sample.analog$sex == 0 & 
+                                                 sample.analog$wavenumber == wavenum], na.rm=T), digits = 2)
+  
+  b <- round(mean(sample.analog$otherincomeval[sample.analog$corrected_other_income_source_1 == type & 
+                                                 sample.analog$otherincomeval > 0 &
+                                                 sample.analog$sex == 1 &
+                                                 sample.analog$wavenumber == wavenum], na.rm=T), digits = 2)
+  
+  if(wavenum == 1){
+    print(paste0("MALE ", type, " ", a))
+    print(paste0("FEMALE ", type, " ",b ))
+  }
+  
+  if(wavenum == 2){
+    print(paste0("MALE ", type, " ", round(a*(1-inflation_1998)*(1-inflation_1999), digits = 2)))
+    print(paste0("FEMALE ", type, " ",round(b*(1-inflation_1998)*(1-inflation_1999), digits = 2) ))
+  }
+  
+  if(wavenum == 3) {
+    print(paste0("MALE ", type, " ", round(a*(1-inflation_1998)*(1-inflation_1999)*
+                                             (1-inflation_2000), digits  = 2)))
+    print(paste0("FEMALE ", type, " ",round(b*(1-inflation_1998)*(1-inflation_1999)*
+                                              (1-inflation_2000), digits = 2 )))
+  }
+}
+
+
+# Use purr to pass all the elements of the list of primary employment options to Table_2_fun 
+walk(c(1:17), Table_2_non_market_fun, wavenum=1)
+walk(c(1:17), Table_2_non_market_fun, wavenum=2)
+walk(c(1:17), Table_2_non_market_fun, wavenum=3)
+
 
