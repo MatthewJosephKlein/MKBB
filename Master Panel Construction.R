@@ -1,4 +1,4 @@
-####################
+#################### Intro
 # Matthew Klein.
 # Master Panel Construction
 # There are five chapters dedicated to panel construction, one for each survey and one for panel construction, and a chapter for Progresa transfer amount calc.
@@ -43,10 +43,10 @@
 # Chapter 1: Baseline ####################
 
 rm(list=ls())
-#setwd("C:/Users/Matthew/Desktop/-/ProgrammingDirectory")
+setwd("C:/Users/mjklein2/Desktop/toot/Programming_Directory")
 library(foreign)
 hh97.df <- read.spss('ENCASEH 97_CALIF ORIG Y 2003.sav', use.value.labels = FALSE, to.data.frame = TRUE)
-'Warning!! Check that the variables are not factors!'
+# 'Warning!! Check that the variables are not factors!'
 str(hh97.df) #visualize
 
 # Individual Identification Information and HH info 
@@ -392,7 +392,7 @@ save(cleaned.97.df, file = "cleaned.97.Master.Rda")
 # Chapter 2: March 1998 ####
 
 rm(list=ls())
-#setwd("C:/Users/Matthew/Desktop/-/ProgrammingDirectory")
+setwd("C:/Users/Matthew/Desktop/-/ProgrammingDirectory")
 library(foreign)
 load("cleaned.97.Master.Rda")
 hh98.df <- read.spss('socioec_encel_98m.sav', use.value.labels = FALSE, to.data.frame = TRUE)
