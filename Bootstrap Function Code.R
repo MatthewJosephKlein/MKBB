@@ -38,7 +38,16 @@ colnames(temp.df) <- c("folio", "drop_dummy_hh")
 
 hh.df <- left_join(temp.df, hh.df)
 
+# Also drop HH's where the partner is absent for one of the waves (cause's 1's and 0's in the BP measure)
+temp.df <- aggregate(hh.df$head_dummy, by = list(hh.df$folio), FUN = sum, na.rm = T)
+#summary(temp.df)
+colnames(temp.df) <- c("folio", "head_dummy_aggregate")
+temp.df$drop_dummy_hh_2 <- ifelse(temp.df$head_dummy_aggregate == 5, 1, 0) 
+
+hh.df <- left_join(hh.df, select(temp.df, folio, drop_dummy_hh_2))
+
 hh.df <- hh.df %>% filter(drop_dummy_hh == 0)
+hh.df <- hh.df %>% filter(drop_dummy_hh_2 == 0)
 
 # A) BP Function (Hyp 1)
 #    A.1) Shadow Earnings function
