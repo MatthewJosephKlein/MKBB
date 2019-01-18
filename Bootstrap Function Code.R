@@ -28,6 +28,18 @@ summary(temp.df)
 
 hh.df <- merge(hh.df, temp.df, by = "folio")
 
+# Drop the HH's where one partner is eligible to have their POO estimated, but the other
+hh.df$drop_dummy <- 0
+hh.df$drop_dummy[hh.df$head_dummy == 1 & hh.df$age < 15 ] <- 1
+hh.df$drop_dummy[hh.df$head_dummy == 1 & hh.df$age > 65 ] <- 1
+
+temp.df <- aggregate(hh.df$drop_dummy, by = list(hh.df$folio), FUN = sum, na.rm=T)
+colnames(temp.df) <- c("folio", "drop_dummy_hh")
+
+hh.df <- left_join(temp.df, hh.df)
+
+hh.df <- hh.df %>% filter(drop_dummy_hh == 0)
+
 # A) BP Function (Hyp 1)
 #    A.1) Shadow Earnings function
 # B) LPM.Marginal.Fun (Hyp 2, 3)
@@ -38,50 +50,60 @@ hh.df <- merge(hh.df, temp.df, by = "folio")
 
 # (A.1) Shadow Earnings (SE) Function 
 SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
-  data.df <- subset(sample.analog,  sample.analog$age > 15 & sample.analog$sex == gender_number &  sample.analog$age <= 60)
+  data.df <- subset(sample.analog,  
+                      sample.analog$sex == gender_number &
+                      sample.analog$age > 15 &
+                      sample.analog$age <= 65)
   
-  selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-    number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-    as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
-    ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
-    proportion_need_permission + proportion_need_accompany  
+  if(gender_number == 0){   
   
-  outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-    number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy    
+  reg <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+                     number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+                     as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
+                     ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
+                     proportion_need_permission + proportion_need_accompany,  
+                   outcome = log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+                     number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+                     as.factor(year_wave_FE) + treatment_dummy,
+                   data = data.df,
+                   method = "ml")
   
-  if(gender_number == 1){  
-    
-    selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-      as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
-      ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
-      proportion_need_permission + proportion_need_accompany + progresa_income_mom
-    
-    outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-      I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy  +  progresa_income_mom    # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
-    
   }
   
-  reg <- selection(selection_formula, outcome_formula, data = data.df, method = "ml")
+  if(gender_number == 1){  
+  # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
+  
+    reg <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+                       number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+                       as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
+                       ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
+                       proportion_need_permission + proportion_need_accompany + progresa_income_mom, 
+                     outcome = log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+                       number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                       I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy  +  progresa_income_mom,
+                     data = data.df,
+                     method = "ml")  
+    
+    }
+  
+  # Add the predicted values to data.df, conditional on LFP
+  data.df <- cbind(data.df,
+                   exp(predict(reg, newdata = data.df, type = "conditional")))
+  
  
   # Predict.selection returns two values per observation, E[y|LFP=1] and E[y|LFP=0]. These have slightly different lambda expressions since the conditions are different.
   # E[y|LFP] = Xbeta + sigma rho lambda(alpha_u) 
   # where lambda(alpha_u) = phi(alpha_u) / Phi(alpha_u) for LFP = 1
   # and lambda(alpha_u) = - phi(alpha_u) / (1- Phi(alpha_u)) for LFP = 0. 
   # See Greene Chapter 24.5, Theorems 24.2 and 24.5, and the derivation in section 24.5.4. 
-  
-  # Add the predicted values to data.df, conditional on LFP
-  data.df <- cbind(data.df,
-    exp(predict(reg, newdata = data.df, type = "conditional")))
   
   # Select the correct prediction based on LFP: 
   data.df$y_hat <- ifelse(data.df$LFP == 1, data.df$"E[yo|ys=1]", data.df$"E[yo|ys=0]")
@@ -91,7 +113,6 @@ SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
   return(y_hat.df)
 }
 
-# hh.df <- subset(hh.df, hh.df$folio != 170466)
 
 # (A.2) BP Function 
 BP.Fun <- function(){ #Calls shadow wage function
@@ -103,28 +124,33 @@ BP.Fun <- function(){ #Calls shadow wage function
   names(y_hat_women_combined) <- c("folio", "ind_ID", "wavenumber", "y_hat_women_combined")
   
   #step 2: Merging it into the sample analog. DO NOT DELETE THE LINES THAT CONVERT NA's TO 0's.
-  sample.analog <- merge(sample.analog, y_hat_women_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
+  sample.analog <- left_join(sample.analog, y_hat_women_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
   sample.analog$y_hat_women_combined[is.na(sample.analog$y_hat_women_combined)] <- 0
-  sample.analog <- merge(sample.analog, y_hat_men_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
+  sample.analog <- left_join(sample.analog, y_hat_men_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
   sample.analog$y_hat_men_combined[is.na(sample.analog$y_hat_men_combined)] <- 0
   
   #Step 3: In steps 1 and 2, every person in the HH has an estimated outside option / shadow earnings. We need to just have the mom and dad. 
   sample.analog$Mom_SW_combined_a <- sample.analog$y_hat_women_combined * sample.analog$head_dummy
-  Mom_SW_combined.df <- aggregate(sample.analog$Mom_SW_combined_a, by = list(Category=sample.analog$folio), FUN=sum)
-  names(Mom_SW_combined.df) <- c("folio", "Mom_SW_combined")
-  sample.analog <- merge(sample.analog, Mom_SW_combined.df, by = "folio")
+  Mom_SW_combined.df <- aggregate(sample.analog$Mom_SW_combined_a, by = list(sample.analog$folio, sample.analog$wavenumber), FUN=sum)
+  names(Mom_SW_combined.df) <- c("folio", "wavenumber", "Mom_SW_combined")
+  sample.analog <- left_join(sample.analog, Mom_SW_combined.df)
   
   sample.analog$Dad_SW_combined_a <- sample.analog$y_hat_men_combined * sample.analog$head_dummy
-  Dad_SW_combined.df <- aggregate(sample.analog$Dad_SW_combined_a, by = list(Category=sample.analog$folio), FUN=sum)
-  names(Dad_SW_combined.df) <- c("folio", "Dad_SW_combined")
-  sample.analog <- merge(sample.analog, Dad_SW_combined.df, by = "folio")
+  Dad_SW_combined.df <- aggregate(sample.analog$Dad_SW_combined_a, by = list(Category=sample.analog$folio, sample.analog$wavenumber), FUN=sum)
+  names(Dad_SW_combined.df) <- c("folio", "wavenumber", "Dad_SW_combined")
+  sample.analog <- left_join(sample.analog, Dad_SW_combined.df)
   
   #Step 4: Generating the relative shadow earnings BP Proxy
   
   #BP = (\hat{E}_f + T_f) / (\hat{E}_f + T_f + \hat{E}_m + T_m)
   
-  sample.analog$BP[sample.analog$wave1 == 1] <- (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
-                                                   sample.analog$T_mom_total[sample.analog$wavenumber == 1] )  / 
+ # There must be a tidy way to complete the below process  
+ # sample.analog <- sample.analog %>% group_by(wavenumber) %>%
+ #    mutate()
+  
+  sample.analog$BP[sample.analog$wave1 == 1] <- 
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
+     sample.analog$T_mom_total[sample.analog$wavenumber == 1] )  / 
     (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
        sample.analog$T_mom_total[sample.analog$wavenumber == 1] +
        sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
@@ -239,7 +265,7 @@ while(j <= B) { #generating the bootstrap
   final.df <- aggregate(sample.analog$BP, by = list(sample.analog$folio, sample.analog$wavenumber), FUN=mean, na.rm=T)
   colnames(final.df) <- c("folio", "wavenumber", "BP")
   
-  final.df <- unique(merge(sample.analog[,c("folio", "wavenumber", "loc_id", "hh_log_wages" , "hh_kids" , "hh_young_kids" , "seven_states",
+  final.df <- unique(left_join(sample.analog[,c("folio", "wavenumber", "loc_id", "hh_log_wages" , "hh_kids" , "hh_young_kids" , "seven_states",
                                             "progresa_income_total","wave2", "wave3", "treatment_household", 
                                             "rice.price_hybrid", "bean.price_hybrid", "egg.price_hybrid", "milk.price_hybrid", # Staples
                                             # ANIMAL PRODUCTS
@@ -289,7 +315,7 @@ while(j <= B) { #generating the bootstrap
   
   boot_t[j] = (DiD[j] - 0.088)/sqrt(DiD_reg_summary$cov.unscaled[4,4])
   
-  LPM_ME_Fun.Results <- LPM_ME_Fun(food_name = "sardinas.o.atun.en.lata")
+  LPM_ME_Fun.Results <- LPM_ME_Fun(food_name = "pollo")
   LPM.Marginal[j] <- LPM_ME_Fun.Results[[1]]
   LPM.BP.sqr.coef.est[j] <- LPM_ME_Fun.Results[[2]]
   
