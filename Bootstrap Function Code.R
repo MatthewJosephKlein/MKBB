@@ -68,14 +68,14 @@ SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
   if(gender_number == 0){   
   
   reg <- selection(selection = LFP ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
                      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
                      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
                      as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
                      ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
                      proportion_need_permission + proportion_need_accompany,  
                    outcome = log_wages ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
                      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
                      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
                      as.factor(year_wave_FE) + treatment_dummy,
@@ -87,15 +87,15 @@ SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
   if(gender_number == 1){  
   # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
   
-    reg <- selection(selection = LFP ~ age + I(age^2) +  asihn(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+    reg <- selection(selection = LFP ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
                        number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
                        I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
                        as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
                        ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
                        proportion_need_permission + proportion_need_accompany + progresa_income_mom, 
                      outcome = log_wages ~ age + I(age^2) +  asihn(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
                        number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
                        I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
                        I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy  +  progresa_income_mom,
