@@ -441,46 +441,53 @@ while(j <= B) { #generating the bootstrap
   final.df <- aggregate(sample.analog$BP, by = list(sample.analog$folio, sample.analog$wavenumber), FUN=mean, na.rm=T)
   colnames(final.df) <- c("folio", "wavenumber", "BP")
   
-  final.df <- unique(left_join(sample.analog[,c("folio", "wavenumber", "loc_id", "hh_log_wages" , "hh_kids" , "hh_young_kids" , "seven_states",
-                                            "progresa_income_total","wave2", "wave3", "treatment_household", 
-                                            "rice.price_hybrid", "bean.price_hybrid", "egg.price_hybrid", "milk.price_hybrid", # Staples
-                                            # ANIMAL PRODUCTS
-                                            "pollo", "huevos", "leche", "pollo_num_times_consume", "leche_num_times_consume", "huevos_num_times_consume", "carne.de.res.o.puerco",
-                                            "pescados.y.mariscos", "pescados.y.mariscos_num_times_consume", "sardinas.o.atun.en.lata", "sardinas.o.atun.en.lata_num_times_consume",
-                                            "carne.de.res.o.puerco_num_times_consume", "manteca.de.cerdo", "manteca.de.cerdo_num_times_consume",
-                                            "chicken.price_hybrid", "lard.price_hybrid" , "sardines.price_hybrid", "tuna.price_hybrid" ,
-                                            "beef.price_hybrid",  "pork.price_hybrid",  "lard.price_hybrid" ,
-                                            # FRUITS AND VEGETABLES
-                                            #  "tomate.rojo" , "zanahorias", "narajas", "verdudas.de.hoja",
-                                            #   "narajas_num_times_consume", "tomate.rojo_num_times_consume",
-                                            #  "cebolla_num_times_consume", "cebolla",
-                                            #  "verdudas.de.hoja", "verdudas.de.hoja_num_times_consume", "platanos", 
-                                            #  "platanos_num_times_consume", "zanahorias_num_times_consume", "limones", "limones_num_times_consume",
-                                            #  "papa_num_times_consume", "papa", "manzanas", "manzanas_num_times_consume",
-                                            #  "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
-                                            #  "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid",
-                                            #  "tomato.price_hybrid" ,
-                                            # PULSES AND GRAINS
-                                            #  "digestive.biscuit.price_hybrid" ,  "frijol", "frijol_num_times_consume",
-                                            #  "pan.blanco.price_hybrid" , 
-                                            #  "tortilla.price_hybrid" , "tortialls.de.maiz_num_times_consume", "tortialls.de.maiz",
-                                            #  "cereales.de.caja", "cereales.de.caja_num_times_consume", "pan.blanco", "pan.de.dulce",
-                                            #  "pan.de.dulce_num_times_consume", "galletas", "galletas_num_times_consume",
-                                            #  "pan.blanco_num_times_consume", 
-                                            #  "pastelillos.en.bolsa_num_times_consume", "pastelillos.en.bolsa",
-                                            #  "maiz.en.grano_num_times_consume", "maiz.en.grano",
-                                            #  "harina.de.trigo_num_times_consume", "harina.de.trigo",
-                                            #  # Miscellaneous
-                                            #  "bebidas.alcoholicas_num_times_consume", "bebidas.alcoholicas",
-                                            #  "cafe", "cafe_num_times_consume", "arroz", "arroz_num_times_consume",
-                                            #  "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" ,
-                                            #  "azucar_num_times_consume", "azucar",
-                                            #  "refrescos", "refrescos_num_times_consume",
-                                            #  "sopa.de.pasta", "sopa.de.pasta_num_times_consume",
-                                            #  "wheat.flour.price_hybrid" , "veg.oil.price_hybrid" , 
-                                            #  "aciete.vegetal", "aciete.vegetal_num_times_consume",
-                                            #  "sopa.de.pasta.price_hybrid", "breakfast.cereal.price_hybrid",
-                                            "treatment_household", "treatment_household_0")], final.df, by =   c("folio", "wavenumber")))
+  final.df <- 
+    unique(left_join(sample.analog[,
+                         c("folio", "wavenumber", "loc_id", "hh_log_wages" , "hh_kids" , 
+                           "hh_young_kids" , "seven_states",
+                           "wave2", "wave3", 
+                           # Staples
+                           "rice.price_hybrid", "bean.price_hybrid", "egg.price_hybrid", 
+                            "milk.price_hybrid", 
+                           # ANIMAL PRODUCTS
+                           "pollo", "huevos", "leche", "pollo_num_times_consume", "leche_num_times_consume", "huevos_num_times_consume", "carne.de.res.o.puerco",
+                           "pescados.y.mariscos", "pescados.y.mariscos_num_times_consume", "sardinas.o.atun.en.lata", "sardinas.o.atun.en.lata_num_times_consume",
+                           "carne.de.res.o.puerco_num_times_consume", "manteca.de.cerdo", "manteca.de.cerdo_num_times_consume",
+                           "chicken.price_hybrid", "lard.price_hybrid" , "sardines.price_hybrid", "tuna.price_hybrid" ,
+                           "beef.price_hybrid",  "pork.price_hybrid",  "lard.price_hybrid" ,
+                            # FRUITS AND VEGETABLES
+                            "tomate.rojo" , "zanahorias", "narajas", "verdudas.de.hoja",
+                             "narajas_num_times_consume", "tomate.rojo_num_times_consume",
+                            "cebolla_num_times_consume", "cebolla",
+                            "verdudas.de.hoja", "verdudas.de.hoja_num_times_consume", "platanos", 
+                            "platanos_num_times_consume", "zanahorias_num_times_consume", "limones", "limones_num_times_consume",
+                            "papa_num_times_consume", "papa", "manzanas", "manzanas_num_times_consume",
+                            "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
+                            "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid",
+                            "tomato.price_hybrid" ,
+                            # PULSES AND GRAINS
+                            "digestive.biscuit.price_hybrid" ,  "frijol", "frijol_num_times_consume",
+                            "pan.blanco.price_hybrid" , 
+                            "tortilla.price_hybrid" , "tortialls.de.maiz_num_times_consume", "tortialls.de.maiz",
+                            "cereales.de.caja", "cereales.de.caja_num_times_consume", "pan.blanco", "pan.de.dulce",
+                            "pan.de.dulce_num_times_consume", "galletas", "galletas_num_times_consume",
+                            "pan.blanco_num_times_consume", 
+                            "pastelillos.en.bolsa_num_times_consume", "pastelillos.en.bolsa",
+                            "maiz.en.grano_num_times_consume", "maiz.en.grano",
+                            "harina.de.trigo_num_times_consume", "harina.de.trigo",
+                            # Miscellaneous
+                            "bebidas.alcoholicas_num_times_consume", "bebidas.alcoholicas",
+                            "cafe", "cafe_num_times_consume", "arroz", "arroz_num_times_consume",
+                            "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" ,
+                            "azucar_num_times_consume", "azucar",
+                            "refrescos", "refrescos_num_times_consume",
+                            "sopa.de.pasta", "sopa.de.pasta_num_times_consume",
+                            "wheat.flour.price_hybrid" , "veg.oil.price_hybrid" , 
+                            "aciete.vegetal", "aciete.vegetal_num_times_consume",
+                            "sopa.de.pasta.price_hybrid", "breakfast.cereal.price_hybrid",
+                            # Treatment Vars
+                            "treatment_household", "treatment_household_0", "progresa_income_total")],
+                               final.df, by =   c("folio", "wavenumber")))
   
   DiD[j] <- (mean(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household == 1], na.rm=T) - 
                mean(final.df$BP[final.df$wavenumber ==  1 & final.df$treatment_household == 1], na.rm=T)) -
@@ -499,30 +506,101 @@ while(j <= B) { #generating the bootstrap
   
   # BS Animal Products Storage ####
   
+  # 1111111111111111111111111111111111111111111111111111111111111111111111111111111111111
   # 1 - Chicken
   temp  <- LPM_ME_Fun_animal("pollo")
   temp2 <- Poisson_ME_Fun_animal("pollo_num_times_consume")
   
+  LPM.Marginal.Chicken[j] <- temp[[1]] # 1
+  RHS.Chicken[j] <- DiD[j]*temp[[1]]   # 3
+  Income.ME.Chicken <- temp[[3]]       # 6
+  Info.ME.Chicken <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Chicken[j] <- temp2[[1]] # 4
+  Cross.Partial.Chicken[j] <- temp2[[2]]    # 5
+  
+  # 2222222222222222222222222222222222222222222222222222222222222222222222222222222222222
+  # 2 - Beef and pork
+  temp  <- LPM_ME_Fun_animal("carne.de.res.o.puerco")
+  temp2 <- Poisson_ME_Fun_animal("carne.de.res.o.puerco_num_times_consume")
+  
+  LPM.Marginal.BeefPork[j] <- temp[[1]] # 1
+  RHS.BeefPork[j] <- DiD[j]*temp[[1]]   # 3
+  Income.ME.BeefPork <- temp[[3]]       # 6
+  Info.ME.BeefPork <- temp[[4]]         # 7
+  
+  Poisson.Marginal.BeefPork[j] <- temp2[[1]] # 4
+  Cross.Partial.BeefPork[j] <- temp2[[2]]    # 5
+  
+  # 333333333333333333333333333333333333333333333333333333333333333333333333333333333333
+  # 3 - Eggs
+  temp  <- LPM_ME_Fun_animal("huevos")
+  temp2 <- Poisson_ME_Fun_animal("huevos_num_times_consume")
+  
+  LPM.Marginal.Eggs[j] <- temp[[1]] # 1
+  RHS.Eggs[j] <- DiD[j]*temp[[1]]   # 3
+  Income.ME.Eggs <- temp[[3]]       # 6
+  Info.ME.Eggs <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Eggs[j] <- temp2[[1]] # 4
+  Cross.Partial.Eggs[j] <- temp2[[2]]    # 5
   
   
-  #Poisson_ME_Fun_animal("carne.de.cabra.u.oveja_num_times_consume")
-  Poisson_ME_Fun_animal("carne.de.res.o.puerco_num_times_consume")
-  Poisson_ME_Fun_animal("huevos_num_times_consume")
-  Poisson_ME_Fun_animal("leche_num_times_consume")
-  Poisson_ME_Fun_animal("pescados.y.mariscos_num_times_consume")       
-  Poisson_ME_Fun_animal("sardinas.o.atun.en.lata_num_times_consume")
-  Poisson_ME_Fun_animal("manteca.de.cerdo_num_times_consume")
+  # 44444444444444444444444444444444444444444444444444444444444444444444444444444
+  # 4 - Milk
+  temp  <- LPM_ME_Fun_animal("leche")
+  temp2 <- Poisson_ME_Fun_animal("leche_num_times_consume")
+  
+  LPM.Marginal.Milk[j] <- temp[[1]] # 1
+  RHS.Milk[j] <- DiD[j]*temp[[1]]   # 3
+  Income.ME.Milk <- temp[[3]]       # 6
+  Info.ME.Milk <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Milk[j] <- temp2[[1]] # 4
+  Cross.Partial.Milk[j] <- temp2[[2]]    # 5
+  
+  # 55555555555555555555555555555555555555555555555555555555555555555555555555555
+  # 5 - Fish
+  temp  <- LPM_ME_Fun_animal("pescados.y.mariscos")
+  temp2 <- Poisson_ME_Fun_animal("pescados.y.mariscos_num_times_consume")
+  
+  LPM.Marginal.Fish[j] <- temp[[1]] # 1
+  RHS.Fish[j] <- DiD[j]*temp[[1]]   # 3
+  Income.ME.Fish <- temp[[3]]       # 6
+  Info.ME.Fish <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Fish[j] <- temp2[[1]] # 4
+  Cross.Partial.Fish[j] <- temp2[[2]]    # 5
+  
+  # 666666666666666666666666666666666666666666666666666666666666666666666666666666
+  # 6 - Canned Sardines and Tuna
+  temp  <- LPM_ME_Fun_animal("sardinas.o.atun.en.lata")
+  temp2 <- Poisson_ME_Fun_animal("sardinas.o.atun.en.lata_num_times_consume")
+  
+  LPM.Marginal.Tuna[j] <- temp[[1]] # 1
+  RHS.Tuna[j] <- DiD[j]*temp[[1]]   # 3
+  Income.ME.Tuna <- temp[[3]]       # 6
+  Info.ME.Tuna <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Tuna[j] <- temp2[[1]] # 4
+  Cross.Partial.Tuna[j] <- temp2[[2]]    # 5
+  
+  # 7777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777
+  # 7 - Lard
+  temp  <- LPM_ME_Fun_animal("manteca.de.cerdo")
+  temp2 <- Poisson_ME_Fun_animal("manteca.de.cerdo_num_times_consume")
+  
+  LPM.Marginal.Lard[j] <- temp[[1]] # 1
+  RHS.Lard[j] <- DiD[j]*temp[[1]]   # 3
+  Income.ME.Lard <- temp[[3]]       # 6
+  Info.ME.Lard <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Lard[j] <- temp2[[1]] # 4
+  Cross.Partial.Lard[j] <- temp2[[2]]    # 5
+  
+  # BS Vegetables and Fruits Storage ####
   
   
-  #LPM_ME_Fun_animal("carne.de.cabra.u.oveja")
-  LPM_ME_Fun_animal("carne.de.res.o.puerco")
-  LPM_ME_Fun_animal("huevos")
-  LPM_ME_Fun_animal("leche")
-  LPM_ME_Fun_animal("pescados.y.mariscos")       
-  LPM_ME_Fun_animal("sardinas.o.atun.en.lata")
-  LPM_ME_Fun_animal("manteca.de.cerdo")
-  
-  # Vegetables and Fruits
   
   Poisson_ME_Fun_VF("cebolla_num_times_consume")
   Poisson_ME_Fun_VF("limones_num_times_consume")
@@ -588,14 +666,6 @@ while(j <= B) { #generating the bootstrap
   
   
   
-  LPM.Marginal[j] <- LPM_ME_Fun.Results[[1]]
-  LPM.BP.sqr.coef.est[j] <- LPM_ME_Fun.Results[[2]]
-  
-  RHS[j] <- DiD[j]*LPM.Marginal[j]
-  
-  Poisson_ME_Fun.Results <- Poisson_ME_Fun(food_name = "sardinas.o.atun.en.lata_num_times_consume")
-  Poisson.Marginal[j] <- Poisson_ME_Fun.Results[[1]]
-  Cross_Partial[j] <- Poisson_ME_Fun.Results[[2]]
   
   j <- j+1
   print(j)
