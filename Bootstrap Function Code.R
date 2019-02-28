@@ -447,8 +447,13 @@ LPM.Marginal.Lime  <- RHS.Lime  <- Poisson.Marginal.Lime <- Cross.Partial.Lime <
 c(rep(NA, B))
 
 #update these when you call each function: Grains
-c(rep(NA, B))
-
+LPM.Marginal.WFlour    <-  RHS.WFlour  <- Poisson.Marginal.WFlour <- Cross.Partial.WFlour <- 
+LPM.Marginal.CFlour    <- RHS.CFlour  <- Poisson.Marginal.CFlour <- Cross.Partial.CFlour <- 
+LPM.Marginal.Rice      <- RHS.Rice  <- Poisson.Marginal.Rice <- Cross.Partial.Rice <- 
+LPM.Marginal.Beans     <- RHS.Beans  <- Poisson.Marginal.Beans <- Cross.Partial.Beans <- 
+LPM.Marginal.Biscuits  <- RHS.Biscuits  <- Poisson.Marginal.Biscuits <- Cross.Partial.Biscuits <- 
+LPM.Marginal.Tortillas <- RHS.Tortillas <- Poisson.Marginal.Tortillas <- Cross.Partial.Tortillas <-
+  c(rep(NA, B))
 
 #update these when you call each function: Misc
 LPM.Marginal.Sugar   <- RHS.Sugar  <- Poisson.Marginal.Sugar <- Cross.Partial.Sugar <-
@@ -460,8 +465,8 @@ LPM.Marginal.Alcohol <-  RHS.Alcohol  <- Poisson.Marginal.Alcohol <- Cross.Parti
 LPM.Marginal.BCereal <- RHS.BCereal  <- Poisson.Marginal.BCereal <- Cross.Partial.BCereal <-
   c(rep(NA, B))
 
-# Previously, I used the following line for one food at a time, a slower approach:
-# boot_t <- DiD <- LPM.Marginal <- Poisson.Marginal <- LPM.BP.sqr.coef.est <- Cross_Partial <- RHS <- c(rep(NA, B))
+# For the BP values
+mean_BP_97 <- mean_BP_99 <- mean_BP_00  <- boot_t <- DiD  <- c(rep(NA, B))
 
 # LPM.Marginal = RHS Derivative 1 & DiD = RHS derivative # 2, #LHS = DID for program participation on food consumption overall  
 
@@ -472,11 +477,15 @@ while(j <= B) { #generating the bootstrap
   sample.analog <- sample.analog.Fun()  
   
   BP.Fun.Results <- BP.Fun()
-  sample.analog <- BP.Fun.Results[[1]]
+  sample.analog <- BP.Fun.Results[[1]] 
   
   # making a matrix of just the HH level variables: 
   final.df <- aggregate(sample.analog$BP, by = list(sample.analog$folio, sample.analog$wavenumber), FUN=mean, na.rm=T)
   colnames(final.df) <- c("folio", "wavenumber", "BP")
+  
+  mean_BP_97[j] <- mean(final.df$BP[final.df$wavenumber == 1], na.rm = T)
+  mean_BP_99[j] <- mean(final.df$BP[final.df$wavenumber == 2], na.rm = T)
+  mean_BP_00[j] <- mean(final.df$BP[final.df$wavenumber == 3], na.rm = T)
   
   final.df <- 
     unique(left_join(sample.analog[,
@@ -534,7 +543,7 @@ while(j <= B) { #generating the bootstrap
   
   DiD_reg_summary <- summary(lm(BP ~ treatment_household + wavenumber + I(treatment_household*wavenumber), data = subset(final.df, final.df$wavenumber < 3)))
   
-  boot_t[j] = (DiD[j] - 0.1705953)/sqrt(DiD_reg_summary$cov.unscaled[4,4]) 
+  boot_t[j] = (DiD[j] - 0.1722391)/sqrt(DiD_reg_summary$cov.unscaled[4,4]) 
   
   keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & 
                                  is.na(BP) == FALSE })# & 
@@ -941,14 +950,46 @@ while(j <= B) { #generating the bootstrap
   print(proc.time() - time)
 }
 
-summary(LPM.Marginal)
-summary(Poisson.Marginal)
+# Saving all the Bootstrap Estimates into a single matrix, and writing that matrix to a csv file #### 
 
-p <- as.data.frame(cbind(LPM.Marginal, Poisson.Marginal, LPM.BP.sqr.coef.est, Cross_Partial, RHS, DiD, boot_t))
+boot <- as.data.frame(cbind(mean_BP_97, mean_BP_99, mean_BP_00, boot_t,  DiD, # BP Values
+                            # saving: Animal Products
+                            LPM.Marginal.Lard  , RHS.Lard  , Poisson.Marginal.Lard , Cross.Partial.Lard ,
+                              LPM.Marginal.Tuna  , RHS.Tuna  , Poisson.Marginal.Tuna , Cross.Partial.Tuna , 
+                              LPM.Marginal.Fish  , RHS.Fish  , Poisson.Marginal.Fish , Cross.Partial.Fish , 
+                              LPM.Marginal.Milk  , RHS.Milk  , Poisson.Marginal.Milk , Cross.Partial.Milk , 
+                              LPM.Marginal.Eggs  , RHS.Eggs  , Poisson.Marginal.Eggs , Cross.Partial.Eggs , 
+                              LPM.Marginal.Chicken  , RHS.Chicken , Poisson.Marginal.Chicken , Cross.Partial.Chicken , 
+                              LPM.Marginal.BeefPork , RHS.BeefPork  , Poisson.Marginal.BeefPork , Cross.Partial.BeefPork ,  
+                            # saving: Fruits and Vegetabels 
+                            LPM.Marginal.Tomato , RHS.Tomato  , Poisson.Marginal.Tomato , Cross.Partial.Tomato , 
+                              LPM.Marginal.Carrots , RHS.Carrots , Poisson.Marginal.Carrots , Cross.Partial.Carrots , 
+                              LPM.Marginal.Greens  , RHS.Greens  , Poisson.Marginal.Greens , Cross.Partial.Greens , 
+                              LPM.Marginal.Banana  , RHS.Banana  ,  Poisson.Marginal.Banana , Cross.Partial.Banana , 
+                              LPM.Marginal.Potato  ,  RHS.Potato  , Poisson.Marginal.Potato , Cross.Partial.Potato , 
+                              LPM.Marginal.Orange  , RHS.Orange  , Poisson.Marginal.Orange , Cross.Partial.Orange , 
+                              LPM.Marginal.Apple  , RHS.Apple  ,  Poisson.Marginal.Apple , Cross.Partial.Apple , 
+                              LPM.Marginal.Onion  , RHS.Onion  ,  Poisson.Marginal.Onion ,  Cross.Partial.Onion , 
+                              LPM.Marginal.Lime  , RHS.Lime  , Poisson.Marginal.Lime , Cross.Partial.Lime ,
+                            # saving: Grains
+                            LPM.Marginal.WFlour    ,  RHS.WFlour  , Poisson.Marginal.WFlour , Cross.Partial.WFlour , 
+                              LPM.Marginal.CFlour    , RHS.CFlour  , Poisson.Marginal.CFlour , Cross.Partial.CFlour , 
+                              LPM.Marginal.Rice      , RHS.Rice  , Poisson.Marginal.Rice , Cross.Partial.Rice , 
+                              LPM.Marginal.Beans     , RHS.Beans  , Poisson.Marginal.Beans , Cross.Partial.Beans , 
+                              LPM.Marginal.Biscuits  , RHS.Biscuits  , Poisson.Marginal.Biscuits , Cross.Partial.Biscuits , 
+                              LPM.Marginal.Tortillas , RHS.Tortillas , Poisson.Marginal.Tortillas , Cross.Partial.Tortillas ,
+                            # saving: Misc
+                            LPM.Marginal.Sugar   , RHS.Sugar  , Poisson.Marginal.Sugar , Cross.Partial.Sugar ,
+                              LPM.Marginal.Coffee  , RHS.Coffee  , Poisson.Marginal.Coffee , Cross.Partial.Coffee ,
+                              LPM.Marginal.Soda    , RHS.Soda  , Poisson.Marginal.Soda , Cross.Partial.Soda ,
+                              LPM.Marginal.CNoodles, RHS.CNoodles  , Poisson.Marginal.CNoodles , Cross.Partial.CNoodles , 
+                              LPM.Marginal.VOil    , RHS.VOil  ,  Poisson.Marginal.VOil , Cross.Partial.VOil , 
+                              LPM.Marginal.Alcohol ,  RHS.Alcohol  , Poisson.Marginal.Alcohol , Cross.Partial.Alcohol , 
+                              LPM.Marginal.BCereal , RHS.BCereal  , Poisson.Marginal.BCereal , Cross.Partial.BCereal))
 
-write.csv(p, file = "Tuna and Sardines 01.30.2017 Bootstrap Results.csv")
+write.csv(boot, file = "Bootstrap_Results_First_30.csv")
 
-# Generating the Efron Intervals
+# Generating the Efron Intervals ####
 
 p.sorted <- apply(p,2,sort,decreasing=F)
 
