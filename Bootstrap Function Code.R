@@ -20,6 +20,7 @@ library("ihs")
 
 load("hh.df.Rda") # From "Final Cleaning for Master Panel Construction.R"
 
+# Treatment households are those who received progresa in wave 2. (1999)
 temp.df <- aggregate(hh.df$progresa_income_total[hh.df$wavenumber==2], 
                      by =list(hh.df$folio[hh.df$wavenumber==2]), FUN=mean, na.rm=T)
 colnames(temp.df) <- c("folio", "progresa_income_total_in_period_2")
@@ -30,6 +31,9 @@ summary(temp.df)
 hh.df <- merge(hh.df, temp.df, by = "folio")
 table(hh.df$treatment_household, hh.df$wavenumber) #  Need to have a var that delineates the T hh's in waves 1 and 2 for the DiD calc
 hh.df$treatment_household_0 <- ifelse(hh.df$wavenumber > 1, hh.df$treatment_household, 0)
+
+# Then, all eligible HH's we're folded into the program in wave 3 (2000) 
+hh.df$receive_progresa <- ifelse(hh.df$progresa_income_total > 0, 1, 0)
       
 # Drop the HH's where one partner is eligible to have their POO estimated, but the other
 hh.df$drop_dummy <- 0
@@ -73,14 +77,14 @@ SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
                      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
                      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-                     as.factor(year_wave_FE) + treatment_household_0  +  # FE and Exclusion Restrictions
+                     as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
                      ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
                      proportion_need_permission + proportion_need_accompany,  
                    outcome = log_wages ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
                      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
                      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-                     as.factor(year_wave_FE) + treatment_household_0,
+                     as.factor(year_wave_FE) + receive_progresa,
                    data = data.df,
                    method = "ml")
   
@@ -93,14 +97,14 @@ SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
                        indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
                        number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
                        I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-                       as.factor(year_wave_FE) + treatment_household_0  +  # FE and Exclusion Restrictions
+                       as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
                        ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
                        proportion_need_permission + proportion_need_accompany + progresa_income_mom, 
                      outcome = log_wages ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
                        indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
                        number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
                        I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                       I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_household_0  +  
+                       I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + receive_progresa  +  
                        progresa_income_mom,
                      data = data.df,
                      method = "ml")  
@@ -197,7 +201,7 @@ BP.Fun <- function(){ #Calls shadow wage function
 LPM_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + treatment_household_0 + hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                chicken.price_hybrid +
                beef.price_hybrid + pork.price_hybrid +   
                lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
@@ -215,7 +219,7 @@ LPM_ME_Fun_animal <- function(food_name){
 # (D) Poisson Model
 Poisson_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + treatment_household_0 + hh_log_wages +  hh_kids + hh_young_kids + wavenumber +
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages +  hh_kids + hh_young_kids + wavenumber +
                    chicken.price_hybrid +
                    beef.price_hybrid + pork.price_hybrid +   
                    lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
@@ -232,13 +236,14 @@ Poisson_ME_Fun_animal <- function(food_name){
                                         "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
                                         "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
-                                                                              as.matrix(model.mat[,
-                                                                                                  c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wavenumber",   
-                                                                                                    "chicken.price_hybrid" ,
-                                                                                                    "beef.price_hybrid" , "pork.price_hybrid" ,    
-                                                                                                    "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
-                                                                                                    "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")]) %*% as.numeric(p1$coefficients)), na.rm = T)
+  ME <- mean((p1$coefficients[1] + 
+                2*p1$coefficients[2]*model.mat$BP) * 
+               exp(model.mat$frail + as.matrix(model.mat[,c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wavenumber",   
+                                                          "chicken.price_hybrid" ,
+                                                          "beef.price_hybrid" , "pork.price_hybrid" ,    
+                                                          "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
+                                                          "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")]) %*% 
+                     as.numeric(p1$coefficients)), na.rm = T)
   
   Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
   
@@ -257,9 +262,9 @@ LPM_ME_Fun_VF <- function(food_name){
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), 
-              2*p1$coefficients[2],
-              p1$coefficients[3], 
+  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), #ME for BP
+              2*p1$coefficients[2], # second derivative of BP 
+              p1$coefficients[3], # 
               p1$coefficients[4]
               ))
   
@@ -274,7 +279,7 @@ Poisson_ME_Fun_VF <- function(food_name){
                    potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
                    tomato.price_hybrid +  
                    rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
-                 cluster = folio,
+                 cluster = folio, # The fixed effect
                  data = final.df.subset, family = poisson)
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
@@ -374,7 +379,6 @@ LPM_ME_Fun_misc <- function(food_name){
 }
 
 
-
 # (D) Poisson Model
 Poisson_ME_Fun_misc <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
@@ -406,7 +410,6 @@ Poisson_ME_Fun_misc <- function(food_name){
   return(list(ME, Cross_Partial)) }
 
 
-
 # (E) Analog
 sample.analog.Fun <- function(){
   hh_nums <- sample(unique(hh.df$folio), N, replace=TRUE) # generates 19000+ cluster IDs
@@ -417,14 +420,48 @@ sample.analog.Fun <- function(){
   return(sample.analog)
 }
 
-
-
 # Chapter 3: Bootstrap ####
 B <- 500
 N <- as.integer(length(table(unique(hh.df$folio))))
 
-#update these when you call each function. 
-boot_t <- DiD <- LPM.Marginal <- Poisson.Marginal <- LPM.BP.sqr.coef.est <- Cross_Partial <- RHS <- c(rep(NA, B))
+#update these when you call each function: Animal Products
+LPM.Marginal.Lard  <- RHS.Lard  <- Poisson.Marginal.Lard <- Cross.Partial.Lard <-
+LPM.Marginal.Tuna  <- RHS.Tuna  <- Poisson.Marginal.Tuna <- Cross.Partial.Tuna <- 
+LPM.Marginal.Fish  <- RHS.Fish  <- Poisson.Marginal.Fish <- Cross.Partial.Fish <- 
+LPM.Marginal.Milk  <- RHS.Milk  <- Poisson.Marginal.Milk <- Cross.Partial.Milk <- 
+LPM.Marginal.Eggs  <- RHS.Eggs  <- Poisson.Marginal.Eggs <- Cross.Partial.Eggs <- 
+LPM.Marginal.Chicken  <- RHS.Chicken <- Poisson.Marginal.Chicken <- Cross.Partial.Chicken <- 
+LPM.Marginal.BeefPork <- RHS.BeefPork  <- Poisson.Marginal.BeefPork <- Cross.Partial.BeefPork <-  
+c(rep(NA, B))
+
+#update these when you call each function: Fruits and Vegetabels 
+LPM.Marginal.Tomato <- RHS.Tomato  <- Poisson.Marginal.Tomato <- Cross.Partial.Tomato <- 
+LPM.Marginal.Carrots <- RHS.Carrots <- Poisson.Marginal.Carrots <- Cross.Partial.Carrots <- 
+LPM.Marginal.Greens  <- RHS.Greens  <- Poisson.Marginal.Greens <- Cross.Partial.Greens <- 
+LPM.Marginal.Banana  <- RHS.Banana  <-  Poisson.Marginal.Banana <- Cross.Partial.Banana <- 
+LPM.Marginal.Potato  <-  RHS.Potato  <- Poisson.Marginal.Potato <- Cross.Partial.Potato <- 
+LPM.Marginal.Orange  <- RHS.Orange  <- Poisson.Marginal.Orange <- Cross.Partial.Orange <- 
+LPM.Marginal.Apple  <- RHS.Apple  <-  Poisson.Marginal.Apple <- Cross.Partial.Apple <- 
+LPM.Marginal.Onion  <- RHS.Onion  <-  Poisson.Marginal.Onion <-  Cross.Partial.Onion <- 
+LPM.Marginal.Lime  <- RHS.Lime  <- Poisson.Marginal.Lime <- Cross.Partial.Lime <-
+c(rep(NA, B))
+
+#update these when you call each function: Grains
+c(rep(NA, B))
+
+
+#update these when you call each function: Misc
+LPM.Marginal.Sugar   <- RHS.Sugar  <- Poisson.Marginal.Sugar <- Cross.Partial.Sugar <-
+LPM.Marginal.Coffee  <- RHS.Coffee  <- Poisson.Marginal.Coffee <- Cross.Partial.Coffee <-
+LPM.Marginal.Soda    <- RHS.Soda  <- Poisson.Marginal.Soda <- Cross.Partial.Soda <-
+LPM.Marginal.CNoodles<- RHS.CNoodles  <- Poisson.Marginal.CNoodles <- Cross.Partial.CNoodles <- 
+LPM.Marginal.VOil    <- RHS.VOil  <-  Poisson.Marginal.VOil <- Cross.Partial.VOil <- 
+LPM.Marginal.Alcohol <-  RHS.Alcohol  <- Poisson.Marginal.Alcohol <- Cross.Partial.Alcohol <- 
+LPM.Marginal.BCereal <- RHS.BCereal  <- Poisson.Marginal.BCereal <- Cross.Partial.BCereal <-
+  c(rep(NA, B))
+
+# Previously, I used the following line for one food at a time, a slower approach:
+# boot_t <- DiD <- LPM.Marginal <- Poisson.Marginal <- LPM.BP.sqr.coef.est <- Cross_Partial <- RHS <- c(rep(NA, B))
 
 # LPM.Marginal = RHS Derivative 1 & DiD = RHS derivative # 2, #LHS = DID for program participation on food consumption overall  
 
@@ -486,7 +523,8 @@ while(j <= B) { #generating the bootstrap
                             "aciete.vegetal", "aciete.vegetal_num_times_consume",
                             "sopa.de.pasta.price_hybrid", "breakfast.cereal.price_hybrid",
                             # Treatment Vars
-                            "treatment_household", "treatment_household_0", "progresa_income_total")],
+                            "treatment_household", "treatment_household_0", "progresa_income_total", 
+                           "receive_progresa")],
                                final.df, by =   c("folio", "wavenumber")))
   
   DiD[j] <- (mean(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household == 1], na.rm=T) - 
@@ -499,8 +537,8 @@ while(j <= B) { #generating the bootstrap
   boot_t[j] = (DiD[j] - 0.1705953)/sqrt(DiD_reg_summary$cov.unscaled[4,4]) 
   
   keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & 
-                                 is.na(BP) == FALSE & 
-                                 is.na(breakfast.cereal.price_hybrid) == FALSE })
+                                 is.na(BP) == FALSE })# & 
+                               #  is.na(breakfast.cereal.price_hybrid) == FALSE })
   final.df.subset <- final.df[keep.index, ]
   final.df.subset$BP2 <- final.df.subset$BP^2
   
@@ -513,8 +551,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Chicken[j] <- temp[[1]] # 1
   RHS.Chicken[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Chicken[j] <- temp[[3]]       # 6
-  Info.ME.Chicken[j] <- temp[[4]]         # 7
+#  Income.ME.Chicken[j] <- temp[[3]]       # 6
+#  Info.ME.Chicken[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Chicken[j] <- temp2[[1]] # 4
   Cross.Partial.Chicken[j] <- temp2[[2]]    # 5
@@ -526,8 +564,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.BeefPork[j] <- temp[[1]] # 1
   RHS.BeefPork[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.BeefPork[j] <- temp[[3]]       # 6
-  Info.ME.BeefPork[j] <- temp[[4]]         # 7
+#  Income.ME.BeefPork[j] <- temp[[3]]       # 6
+#  Info.ME.BeefPork[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.BeefPork[j] <- temp2[[1]] # 4
   Cross.Partial.BeefPork[j] <- temp2[[2]]    # 5
@@ -539,12 +577,11 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Eggs[j] <- temp[[1]] # 1
   RHS.Eggs[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Eggs[j] <- temp[[3]]       # 6
-  Info.ME.Eggs[j] <- temp[[4]]         # 7
+  #  Income.ME.Eggs[j] <- temp[[3]]       # 6
+  #Info.ME.Eggs[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Eggs[j] <- temp2[[1]] # 4
   Cross.Partial.Eggs[j] <- temp2[[2]]    # 5
-  
   
   # 44444444444444444444444444444444444444444444444444444444444444444444444444444
   # 4 - Milk
@@ -553,8 +590,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Milk[j] <- temp[[1]] # 1
   RHS.Milk[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Milk[j] <- temp[[3]]       # 6
-  Info.ME.Milk[j] <- temp[[4]]         # 7
+  # Income.ME.Milk[j] <- temp[[3]]       # 6
+  # Info.ME.Milk[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Milk[j] <- temp2[[1]] # 4
   Cross.Partial.Milk[j] <- temp2[[2]]    # 5
@@ -566,8 +603,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Fish[j] <- temp[[1]] # 1
   RHS.Fish[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Fish[j] <- temp[[3]]       # 6
-  Info.ME.Fish[j] <- temp[[4]]         # 7
+  # Income.ME.Fish[j] <- temp[[3]]       # 6
+  # Info.ME.Fish[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Fish[j] <- temp2[[1]] # 4
   Cross.Partial.Fish[j] <- temp2[[2]]    # 5
@@ -579,8 +616,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Tuna[j] <- temp[[1]] # 1
   RHS.Tuna[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Tuna[j] <- temp[[3]]       # 6
-  Info.ME.Tuna[j] <- temp[[4]]         # 7
+  # Income.ME.Tuna[j] <- temp[[3]]       # 6
+  # Info.ME.Tuna[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Tuna[j] <- temp2[[1]] # 4
   Cross.Partial.Tuna[j] <- temp2[[2]]    # 5
@@ -592,13 +629,14 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Lard[j] <- temp[[1]] # 1
   RHS.Lard[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Lard[j] <- temp[[3]]       # 6
-  Info.ME.Lard[j] <- temp[[4]]         # 7
-  
+  # Income.ME.Lard[j] <- temp[[3]]       # 6
+  #  Info.ME.Lard[j] <- temp[[4]]         # 7
+    
   Poisson.Marginal.Lard[j] <- temp2[[1]] # 4
   Cross.Partial.Lard[j] <- temp2[[2]]    # 5
   
-  # 8 - 17 BS Vegetables and Fruits Storage ####
+  # 8 - 16 BS Vegetables and Fruits Storage ####
+  
   
   # 88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888
   # 8 - Onion
@@ -607,8 +645,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Onion[j] <- temp[[1]] # 1
   RHS.Onion[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Onion[j] <- temp[[3]]       # 6
-  Info.ME.Onion[j] <- temp[[4]]         # 7
+  # Income.ME.Onion[j] <- temp[[3]]       # 6
+  #  Info.ME.Onion[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Onion[j] <- temp2[[1]] # 4
   Cross.Partial.Onion[j] <- temp2[[2]]    # 5
@@ -620,8 +658,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Lime[j] <- temp[[1]] # 1
   RHS.Lime[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Lime[j] <- temp[[3]]       # 6
-  Info.ME.Lime[j] <- temp[[4]]         # 7
+  #Income.ME.Lime[j] <- temp[[3]]       # 6
+  #Info.ME.Lime[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Lime[j] <- temp2[[1]] # 4
   Cross.Partial.Lime[j] <- temp2[[2]]    # 5
@@ -633,8 +671,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Apple[j] <- temp[[1]] # 1
   RHS.Apple[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Apple[j] <- temp[[3]]       # 6
-  Info.ME.Apple[j] <- temp[[4]]         # 7
+  # Income.ME.Apple[j] <- temp[[3]]       # 6
+  # Info.ME.Apple[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Apple[j] <- temp2[[1]] # 4
   Cross.Partial.Apple[j] <- temp2[[2]]    # 5
@@ -646,8 +684,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Orange[j] <- temp[[1]] # 1
   RHS.Orange[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Orange[j] <- temp[[3]]       # 6
-  Info.ME.Orange[j] <- temp[[4]]         # 7
+  #Income.ME.Orange[j] <- temp[[3]]       # 6
+  # Info.ME.Orange[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Orange[j] <- temp2[[1]] # 4
   Cross.Partial.Orange[j] <- temp2[[2]]    # 5
@@ -659,8 +697,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Potato[j] <- temp[[1]] # 1
   RHS.Potato[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Potato[j] <- temp[[3]]       # 6
-  Info.ME.Potato[j] <- temp[[4]]         # 7
+  # Income.ME.Potato[j] <- temp[[3]]       # 6
+  # Info.ME.Potato[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Potato[j] <- temp2[[1]] # 4
   Cross.Partial.Potato[j] <- temp2[[2]]    # 5
@@ -672,8 +710,8 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Banana[j] <- temp[[1]] # 1
   RHS.Banana[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Banana[j] <- temp[[3]]       # 6
-  Info.ME.Banana[j] <- temp[[4]]         # 7
+  #Income.ME.Banana[j] <- temp[[3]]       # 6
+  # Info.ME.Banana[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Banana[j] <- temp2[[1]] # 4
   Cross.Partial.Banana[j] <- temp2[[2]]    # 5
@@ -685,12 +723,12 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Greens[j] <- temp[[1]] # 1
   RHS.Greens[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Greens[j] <- temp[[3]]       # 6
-  Info.ME.Greens[j] <- temp[[4]]         # 7
+  # Income.ME.Greens[j] <- temp[[3]]       # 6
+  #  Info.ME.Greens[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Greens[j] <- temp2[[1]] # 4
   Cross.Partial.Greens[j] <- temp2[[2]]    # 5
-
+  
   # 1515151515151515151515151515151515151515151515151515151515151515151515151515151515151515151515
   # 15 - Carrots
   temp  <- LPM_ME_Fun_VF("zanahorias")
@@ -698,70 +736,206 @@ while(j <= B) { #generating the bootstrap
   
   LPM.Marginal.Carrots[j] <- temp[[1]] # 1
   RHS.Carrots[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Carrots[j] <- temp[[3]]       # 6
-  Info.ME.Carrots[j] <- temp[[4]]         # 7
+  # Income.ME.Carrots[j] <- temp[[3]]       # 6
+  # Info.ME.Carrots[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Carrots[j] <- temp2[[1]] # 4
   Cross.Partial.Carrots[j] <- temp2[[2]]    # 5
   
   # 1616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616
   # 16 - Tomato
-  temp  <- LPM_ME_Fun_VF("zanahorias")
-  temp2 <- Poisson_ME_Fun_VF("zanahorias_num_times_consume")
+  temp  <- LPM_ME_Fun_VF("tomate.rojo")
+  temp2 <- Poisson_ME_Fun_VF("tomate.rojo_num_times_consume")
   
   LPM.Marginal.Tomato[j] <- temp[[1]] # 1
   RHS.Tomato[j] <- DiD[j]*temp[[1]]   # 3
-  Income.ME.Tomato[j] <- temp[[3]]       # 6
-  Info.ME.Tomato[j] <- temp[[4]]         # 7
+  # Income.ME.Tomato[j] <- temp[[3]]       # 6
+  # Info.ME.Tomato[j] <- temp[[4]]         # 7
   
   Poisson.Marginal.Tomato[j] <- temp2[[1]] # 4
   Cross.Partial.Tomato[j] <- temp2[[2]]    # 5
   
-  # BS 19-26 Grains Storage ####
+  # BS 17-24 Grains Storage ####
   
-  Poisson_ME_Fun_grains("arroz_num_times_consume")
-  Poisson_ME_Fun_grains("frijol_num_times_consume")
-  Poisson_ME_Fun_grains("galletas_num_times_consume")
-  Poisson_ME_Fun_grains("maiz.en.grano_num_times_consume")
-  Poisson_ME_Fun_grains("pan.blanco_num_times_consume")
-  #Poisson_ME_Fun_grains("pan.de.caja_num_times_consume")
-  Poisson_ME_Fun_grains("pan.de.dulce_num_times_consume")
-  #Poisson_ME_Fun_grains("pastelillos.en.bolsa_num_times_consume")
-  Poisson_ME_Fun_grains("tortialls.de.maiz_num_times_consume")
-  Poisson_ME_Fun_grains("harina.de.trigo_num_times_consume")
+  # 171717171717171717171717171717171717171717171717171717171717171717171717171717171717171717
+  # 17 - Rice
+  temp  <- LPM_ME_Fun_VF("arroz")
+  temp2 <- Poisson_ME_Fun_VF("arroz_num_times_consume")
   
-  LPM_ME_Fun_grains("arroz")
-  LPM_ME_Fun_grains("frijol")
-  LPM_ME_Fun_grains("galletas")
-  LPM_ME_Fun_grains("maiz.en.grano")
-  LPM_ME_Fun_grains("harina.de.trigo")
-  LPM_ME_Fun_grains("pan.blanco")
-  #LPM_ME_Fun_grains("pan.de.caja")
-  LPM_ME_Fun_grains("pan.de.dulce")
-  #LPM_ME_Fun_grains("pastelillos.en.bolsa")
-  LPM_ME_Fun_grains("tortialls.de.maiz")
+  LPM.Marginal.Rice[j] <- temp[[1]] # 1
+  RHS.Rice[j] <- DiD[j]*temp[[1]]   # 3
+  # Income.ME.Rice[j] <- temp[[3]]       # 6
+  # Info.ME.Rice[j] <- temp[[4]]         # 7
   
-  # BS 27- 34 Miscellaneous Storage ####
+  Poisson.Marginal.Rice[j] <- temp2[[1]] # 4
+  Cross.Partial.Rice[j] <- temp2[[2]]    # 5
   
-  Poisson_ME_Fun_misc("azucar_num_times_consume")
-  Poisson_ME_Fun_misc("cafe_num_times_consume")
-  Poisson_ME_Fun_misc("refrescos_num_times_consume")
-  Poisson_ME_Fun_misc("sopa.de.pasta_num_times_consume")
-  Poisson_ME_Fun_misc("aciete.vegetal_num_times_consume")
-  Poisson_ME_Fun_misc("bebidas.alcoholicas_num_times_consume")
-  Poisson_ME_Fun_misc("cereales.de.caja_num_times_consume")
+  # 181818181818181818181818181818181818181818181818181818181818181818181818181818181818181818
+  # 18 - Beans
+  temp  <- LPM_ME_Fun_VF("frijol")
+  temp2 <- Poisson_ME_Fun_VF("frijol_num_times_consume")
   
-  LPM_ME_Fun_misc("azucar")
-  LPM_ME_Fun_misc("cafe")
-  LPM_ME_Fun_misc("refrescos")
-  LPM_ME_Fun_misc("sopa.de.pasta")
-  LPM_ME_Fun_misc("aciete.vegetal")
-  LPM_ME_Fun_misc("bebidas.alcoholicas")
-  LPM_ME_Fun_misc("cereales.de.caja")
+  LPM.Marginal.Beans[j] <- temp[[1]] # 1
+  RHS.Beans[j] <- DiD[j]*temp[[1]]   # 3
+  # Income.ME.Beans[j] <- temp[[3]]       # 6
+  # Info.ME.Beans[j] <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Beans[j] <- temp2[[1]] # 4
+  Cross.Partial.Beans[j] <- temp2[[2]]    # 5
+  
+  # 19191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919
+  # 19 - Digestive Biscuits
+  temp  <- LPM_ME_Fun_VF("galletas")
+  temp2 <- Poisson_ME_Fun_VF("galletas_num_times_consume")
+  
+  LPM.Marginal.Biscuits[j] <- temp[[1]] # 1
+  RHS.Biscuits[j] <- DiD[j]*temp[[1]]   # 3
+  # Income.ME.Biscuits[j] <- temp[[3]]       # 6
+  # Info.ME.Biscuits[j] <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Biscuits[j] <- temp2[[1]] # 4
+  Cross.Partial.Biscuits[j] <- temp2[[2]]    # 5
+  
+  # 20202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020
+  # 20 - Corn Flour
+  temp  <- LPM_ME_Fun_VF("maiz.en.grano")
+  temp2 <- Poisson_ME_Fun_VF("maiz.en.grano_num_times_consume")
+  
+  LPM.Marginal.CFlour[j] <- temp[[1]] # 1
+  RHS.CFlour[j] <- DiD[j]*temp[[1]]   # 3
+  #  Income.ME.CFlour[j] <- temp[[3]]       # 6
+  #  Info.ME.CFlour[j] <- temp[[4]]         # 7
+  
+  Poisson.Marginal.CFlour[j] <- temp2[[1]] # 4
+  Cross.Partial.CFlour[j] <- temp2[[2]]    # 5
+  
+  # 21212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121
+  # 21 - White Bread
+  temp  <- LPM_ME_Fun_VF("pan.blanco")
+  temp2 <- Poisson_ME_Fun_VF("pan.blanco_num_times_consume")
+  
+  LPM.Marginal.WBread[j] <- temp[[1]] # 1
+  RHS.WBread[j] <- DiD[j]*temp[[1]]   # 3
+  # Income.ME.WBread[j] <- temp[[3]]       # 6
+  # Info.ME.WBread[j] <- temp[[4]]         # 7
+  
+  Poisson.Marginal.WBread[j] <- temp2[[1]] # 4
+  Cross.Partial.WBread[j] <- temp2[[2]]    # 5
+  
+  # 222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222
+  # 22 - Pastries
+  temp  <- LPM_ME_Fun_VF("pan.de.dulce")
+  temp2 <- Poisson_ME_Fun_VF("pan.de.dulce_num_times_consume")
+  
+  LPM.Marginal.Pastries[j] <- temp[[1]] # 1
+  RHS.Pastries[j] <- DiD[j]*temp[[1]]   # 3
+  # Income.ME.Pastries[j] <- temp[[3]]       # 6
+  # Info.ME.Pastries[j] <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Pastries[j] <- temp2[[1]] # 4
+  Cross.Partial.Pastries[j] <- temp2[[2]]    # 5
+  
+  # 232323232323232323232323232323232323232323232323232323232323232323232323232323232323232323
+  # 23 - Tortillas
+  temp  <- LPM_ME_Fun_VF("tortialls.de.maiz")
+  temp2 <- Poisson_ME_Fun_VF("tortialls.de.maiz_num_times_consume")
+  
+  LPM.Marginal.Tortillas[j] <- temp[[1]] # 1
+  RHS.Tortillas[j] <- DiD[j]*temp[[1]]   # 3
+  # Income.ME.Tortillas[j] <- temp[[3]]       # 6
+  # Info.ME.Tortillas[j] <- temp[[4]]         # 7
+  
+  Poisson.Marginal.Tortillas[j] <- temp2[[1]] # 4
+  Cross.Partial.Tortillas[j] <- temp2[[2]]    # 5
+  
+  # 2424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424
+  # 24 - Wheat Flour
+  temp  <- LPM_ME_Fun_VF("harina.de.trigo")
+  temp2 <- Poisson_ME_Fun_VF("harina.de.trigo_num_times_consume")
+  
+  LPM.Marginal.WFlour[j] <- temp[[1]] # 1
+  RHS.WFlour[j] <- DiD[j]*temp[[1]]   # 3
+  # Income.ME.Tortillas[j] <- temp[[3]]       # 6
+  # Info.ME.Tortillas[j] <- temp[[4]]         # 7
+  
+  Poisson.Marginal.WFlour[j] <- temp2[[1]] # 4
+  Cross.Partial.WFlour[j] <- temp2[[2]]    # 5
+  
+  # BS 25- 31 Miscellaneous Storage ####
+  
+  # 252525252525252525252525252525252525252525252525252525252525252525252525252525252525252525
+  # 25 - Sugar
+  temp  <- LPM_ME_Fun_VF("azucar")
+  temp2 <- Poisson_ME_Fun_VF("azucar_num_times_consume")
+  
+  LPM.Marginal.Sugar[j] <- temp[[1]] # 1
+  RHS.Sugar[j] <- DiD[j]*temp[[1]]   # 3
+  Poisson.Marginal.Sugar[j] <- temp2[[1]] # 4
+  Cross.Partial.Sugar[j] <- temp2[[2]]    # 5
+  
+  # 2626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626
+  # 26 - Coffee
+  temp  <- LPM_ME_Fun_VF("cafe")
+  temp2 <- Poisson_ME_Fun_VF("cafe_num_times_consume")
+  
+  LPM.Marginal.Coffee[j] <- temp[[1]] # 1
+  RHS.Coffee[j] <- DiD[j]*temp[[1]]   # 3
+  Poisson.Marginal.Coffee[j] <- temp2[[1]] # 4
+  Cross.Partial.Coffee[j] <- temp2[[2]]    # 5
+  
+  # 2727272727272727272727272727272727272727272727272727272727272727272727272727272727272727272727
+  # 27 - Soda
+  temp  <- LPM_ME_Fun_VF("refrescos")
+  temp2 <- Poisson_ME_Fun_VF("refrescos_num_times_consume")
+  
+  LPM.Marginal.Soda[j] <- temp[[1]] # 1
+  RHS.Soda[j] <- DiD[j]*temp[[1]]   # 3
+  Poisson.Marginal.Soda[j] <- temp2[[1]] # 4
+  Cross.Partial.Soda[j] <- temp2[[2]]    # 5
   
   
+  # 282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828282828
+  # 28 - Cup Noodles
+  temp  <- LPM_ME_Fun_VF("sopa.de.pasta")
+  temp2 <- Poisson_ME_Fun_VF("sopa.de.pasta_num_times_consume")
+  
+  LPM.Marginal.CNoodles[j] <- temp[[1]] # 1
+  RHS.CNoodles[j] <- DiD[j]*temp[[1]]   # 3
+  Poisson.Marginal.CNoodles[j] <- temp2[[1]] # 4
+  Cross.Partial.CNoodles[j] <- temp2[[2]]    # 5
+  
+  # 292929292929292929292929292929292929292929292929292929292929292929292929292929292929292929292929
+  # 29 - Vegetable Oil
+  temp  <- LPM_ME_Fun_VF("aciete.vegetal")
+  temp2 <- Poisson_ME_Fun_VF("aciete.vegetal_num_times_consume")
+  
+  LPM.Marginal.VOil[j] <- temp[[1]] # 1
+  RHS.VOil[j] <- DiD[j]*temp[[1]]   # 3
+  Poisson.Marginal.VOil[j] <- temp2[[1]] # 4
+  Cross.Partial.VOil[j] <- temp2[[2]]    # 5
+  
+  # 3030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030
+  # 30 - Alcohol
+  temp  <- LPM_ME_Fun_VF("bebidas.alcoholicas")
+  temp2 <- Poisson_ME_Fun_VF("bebidas.alcoholicas_num_times_consume")
+  
+  LPM.Marginal.Alcohol[j] <- temp[[1]] # 1
+  RHS.Alcohol[j] <- DiD[j]*temp[[1]]   # 3
+  Poisson.Marginal.Alcohol[j] <- temp2[[1]] # 4
+  Cross.Partial.Alcohol[j] <- temp2[[2]]    # 5
   
   
+  # 3131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131
+  # 31 - Breakfast Cereal
+  temp  <- LPM_ME_Fun_VF("cereales.de.caja")
+  temp2 <- Poisson_ME_Fun_VF("cereales.de.caja_num_times_consume")
+  
+  LPM.Marginal.BCereal[j] <- temp[[1]] # 1
+  RHS.BCereal[j] <- DiD[j]*temp[[1]]   # 3
+  Poisson.Marginal.BCereal[j] <- temp2[[1]] # 4
+  Cross.Partial.BCereal[j] <- temp2[[2]]    # 5
+  
+
   j <- j+1
   print(j)
   print(proc.time() - time)
