@@ -200,7 +200,7 @@ BP.Fun <- function(){ #Calls shadow wage function
 # (B) Linear Probability Model on Whole Sample for animal 
 LPM_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df) == food_name)
-  print(i)
+  # print(i)
   p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                chicken.price_hybrid +
                beef.price_hybrid + pork.price_hybrid +   
@@ -254,7 +254,7 @@ Poisson_ME_Fun_animal <- function(food_name){
 
 LPM_ME_Fun_VF <- function(food_name){
   i <- which(colnames(final.df) == food_name)
-  print(i)
+  # print(i)
   p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
                potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
@@ -309,7 +309,7 @@ Poisson_ME_Fun_VF <- function(food_name){
 
 LPM_ME_Fun_grains <- function(food_name){
   i <- which(colnames(final.df) == food_name)
-  print(i)
+  #  print(i)
   p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                digestive.biscuit.price_hybrid +      
                pan.blanco.price_hybrid + 
@@ -364,7 +364,7 @@ Poisson_ME_Fun_grains <- function(food_name){
 
 LPM_ME_Fun_misc <- function(food_name){
   i <- which(colnames(final.df) == food_name)
-  print(i)
+  # print(i)
   p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
                veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + breakfast.cereal.price_hybrid + 
@@ -421,7 +421,7 @@ sample.analog.Fun <- function(){
 }
 
 # Chapter 3: Bootstrap ####
-B <- 500
+B <- 30
 N <- as.integer(length(table(unique(hh.df$folio))))
 
 #update these when you call each function: Animal Products
@@ -452,6 +452,7 @@ LPM.Marginal.CFlour    <- RHS.CFlour  <- Poisson.Marginal.CFlour <- Cross.Partia
 LPM.Marginal.Rice      <- RHS.Rice  <- Poisson.Marginal.Rice <- Cross.Partial.Rice <- 
 LPM.Marginal.Beans     <- RHS.Beans  <- Poisson.Marginal.Beans <- Cross.Partial.Beans <- 
 LPM.Marginal.Biscuits  <- RHS.Biscuits  <- Poisson.Marginal.Biscuits <- Cross.Partial.Biscuits <- 
+LPM.Marginal.WBread <- RHS.WBread <- Poisson.Marginal.WBread <- Cross.Partial.WBread <-
 LPM.Marginal.Tortillas <- RHS.Tortillas <- Poisson.Marginal.Tortillas <- Cross.Partial.Tortillas <-
   c(rep(NA, B))
 
@@ -463,6 +464,7 @@ LPM.Marginal.CNoodles<- RHS.CNoodles  <- Poisson.Marginal.CNoodles <- Cross.Part
 LPM.Marginal.VOil    <- RHS.VOil  <-  Poisson.Marginal.VOil <- Cross.Partial.VOil <- 
 LPM.Marginal.Alcohol <-  RHS.Alcohol  <- Poisson.Marginal.Alcohol <- Cross.Partial.Alcohol <- 
 LPM.Marginal.BCereal <- RHS.BCereal  <- Poisson.Marginal.BCereal <- Cross.Partial.BCereal <-
+LPM.Marginal.Pastries <- RHS.Pastries <-  Poisson.Marginal.Pastries <- Cross.Partial.Pastries <-   
   c(rep(NA, B))
 
 # For the BP values
@@ -977,6 +979,7 @@ boot <- as.data.frame(cbind(mean_BP_97, mean_BP_99, mean_BP_00, boot_t,  DiD, # 
                               LPM.Marginal.Rice      , RHS.Rice  , Poisson.Marginal.Rice , Cross.Partial.Rice , 
                               LPM.Marginal.Beans     , RHS.Beans  , Poisson.Marginal.Beans , Cross.Partial.Beans , 
                               LPM.Marginal.Biscuits  , RHS.Biscuits  , Poisson.Marginal.Biscuits , Cross.Partial.Biscuits , 
+                              LPM.Marginal.WBread , RHS.WBread , Poisson.Marginal.WBread , Cross.Partial.WBread, 
                               LPM.Marginal.Tortillas , RHS.Tortillas , Poisson.Marginal.Tortillas , Cross.Partial.Tortillas ,
                             # saving: Misc
                             LPM.Marginal.Sugar   , RHS.Sugar  , Poisson.Marginal.Sugar , Cross.Partial.Sugar ,
@@ -985,6 +988,7 @@ boot <- as.data.frame(cbind(mean_BP_97, mean_BP_99, mean_BP_00, boot_t,  DiD, # 
                               LPM.Marginal.CNoodles, RHS.CNoodles  , Poisson.Marginal.CNoodles , Cross.Partial.CNoodles , 
                               LPM.Marginal.VOil    , RHS.VOil  ,  Poisson.Marginal.VOil , Cross.Partial.VOil , 
                               LPM.Marginal.Alcohol ,  RHS.Alcohol  , Poisson.Marginal.Alcohol , Cross.Partial.Alcohol , 
+                              LPM.Marginal.Pastries , RHS.Pastries ,  Poisson.Marginal.Pastries , Cross.Partial.Pastries, 
                               LPM.Marginal.BCereal , RHS.BCereal  , Poisson.Marginal.BCereal , Cross.Partial.BCereal))
 
 write.csv(boot, file = "Bootstrap_Results_First_30.csv")
