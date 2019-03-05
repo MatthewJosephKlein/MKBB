@@ -56,6 +56,12 @@ hh.df <- left_join(hh.df, select(temp.df, folio, drop_dummy_hh_2))
 hh.df <- hh.df %>% filter(drop_dummy_hh == 0)
 hh.df <- hh.df %>% filter(drop_dummy_hh_2 == 0)
 
+# hh.df <- hh.df %>% filter(age < 90)
+
+hh.df$prop_usa_migrant_dummy <- ifelse(hh.df$prop_usa_migrant > 0 & !is.na(hh.df$prop_usa_migrant), 1, 0)
+hh.df$prop_mex_migrant_dummy <- ifelse(hh.df$prop_mex_migrant > 0 & !is.na(hh.df$prop_mex_migrant), 1, 0)
+hh.df$otherincomeval_dummy <- ifelse(hh.df$otherincomeval > 0, 1, 0)
+
 # A) BP Function (Hyp 1)
 #    A.1) Shadow Earnings function
 # B) LPM.Marginal.Fun (Hyp 2, 3)
@@ -66,24 +72,65 @@ hh.df <- hh.df %>% filter(drop_dummy_hh_2 == 0)
 
 # (A.1) Shadow Earnings (SE) Function 
 SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
+  
   data.df <- subset(sample.analog,  
                       sample.analog$sex == gender_number &
                       sample.analog$age > 15 &
-                      sample.analog$age <= 65)
+                      sample.analog$age <= 65 &
+                      sample.analog$hh_kids <= 5 & 
+                      sample.analog$hh_young_kids <= 4 & 
+                      sample.analog$num_m_adults <= 5 &
+                      sample.analog$num_f_adults <= 5 & 
+                      sample.analog$hh_young_kids <= quantile(sample.analog$hh_young_kids, 0.95))
+                    # sample.analog$prop_mex_migrant <= quantile(sample.analog$prop_mex_migrant, 0.95) 
+                    # sample.analog$prop_usa_migrant <= quantile(sample.analog$prop_usa_migrant, 0.95))
+                    #  sample.analog$num_f_adults <= quantile(sample.analog$num_f_adults, 0.95) &
+                    #  sample.analog$num_m_adults <= quantile(sample.analog$num_m_adults, 0.95) )
+                    # sample.analog$hh_kids <= quantile(sample.analog$hh_kids, 0.95) &
+                    #  &
+                    # sample.analog$number_female_kids <= quantile(sample.analog$number_female_kids, 0.95) &
+                    # sample.analog$number_male_kids <= quantile(sample.analog$number_male_kids, 0.95) &
+                    # sample.analog$edu_yrs <= quantile(sample.analog$edu_yrs, 0.95) &
+
+  
+  
+  data.df$drop <- ifelse(!is.na(data.df$log_wages) & 
+                         data.df$log_wages >=  quantile(data.df$log_wages,
+                                                        c(0.99),
+                                                        na.rm=T),
+                       1, 0)
+
+
+  data.df$drop <- ifelse(!is.na(data.df$log_wages) & 
+                         data.df$log_wages <=  quantile(data.df$log_wages,
+                                                        c(0.01),
+                                                        na.rm=T),
+                       1, data.df$drop)
+  
+  
+
+  data.df <- data.df %>% filter(drop == 0)
+
+  
   
   if(gender_number == 0){   
   
-  reg <- selection(selection = LFP ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+  reg <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+                     hh_young_kids + edu_yrs + literate + gov_transfer +
                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                     number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+                     number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                     I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                     I(num_f_adults*prop_usa_migrant) +    
                      as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                     ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
-                     proportion_need_permission + proportion_need_accompany,  
-                   outcome = log_wages ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+                     (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
+                   outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+                    hh_young_kids + edu_yrs  + literate + gov_transfer +
                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
-                     number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
+                     number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                     I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                     I(num_f_adults*prop_usa_migrant) +    
                      as.factor(year_wave_FE) + receive_progresa,
                    data = data.df,
                    method = "ml")
@@ -93,27 +140,40 @@ SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
   if(gender_number == 1){  
   # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
   
-    reg <- selection(selection = LFP ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+    reg <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+                  hh_young_kids + edu_yrs  + literate + gov_transfer +
                        indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                       number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-                       as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                       ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
-                       proportion_need_permission + proportion_need_accompany + progresa_income_mom, 
-                     outcome = log_wages ~ age + I(age^2) +  asinh(otherincomeval) + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
+                       number_female_kids + number_male_kids  + 
+                    prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                    I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
+                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                    I(num_f_adults*prop_usa_migrant) +
+                      as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+                    (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
+                    asinh(progresa_income_mom), 
+                  # 
+                     outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+                        hh_young_kids + edu_yrs  + literate + gov_transfer +
                        indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                       number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
+                       number_female_kids + number_male_kids  +
+                   prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                       I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
                        I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                       I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + receive_progresa  +  
-                       progresa_income_mom,
+                      I(num_f_adults*prop_usa_migrant) +
+                      as.factor(year_wave_FE) + receive_progresa  +  
+                       asinh(progresa_income_mom),
                      data = data.df,
                      method = "ml")  
     
-    }
+        summary(exp(predict(reg, newdata = data.df, type = "conditional")))
+    
+    
+      }
   
   # Add the predicted values to data.df, conditional on LFP
   data.df <- cbind(data.df,
-                   exp(predict(reg, newdata = data.df, type = "conditional")))
+                   exp(predict(reg, newdata = data.df, type = "conditional"))
+                   )
   
  
   # Predict.selection returns two values per observation, E[y|LFP=1] and E[y|LFP=0]. These have slightly different lambda expressions since the conditions are different.
@@ -421,7 +481,7 @@ sample.analog.Fun <- function(){
 }
 
 # Chapter 3: Bootstrap ####
-B <- 30
+B <- 500
 N <- as.integer(length(table(unique(hh.df$folio))))
 
 #update these when you call each function: Animal Products
@@ -473,8 +533,8 @@ mean_BP_97 <- mean_BP_99 <- mean_BP_00  <- boot_t <- DiD  <- c(rep(NA, B))
 # LPM.Marginal = RHS Derivative 1 & DiD = RHS derivative # 2, #LHS = DID for program participation on food consumption overall  
 
 j = 1
-
-while(j <= B) { #generating the bootstrap
+ 
+while(mean_BP_97[j-1] <= 0.5) { #generating the bootstrap
   time <- proc.time()
   sample.analog <- sample.analog.Fun()  
   
@@ -485,10 +545,10 @@ while(j <= B) { #generating the bootstrap
   final.df <- aggregate(sample.analog$BP, by = list(sample.analog$folio, sample.analog$wavenumber), FUN=mean, na.rm=T)
   colnames(final.df) <- c("folio", "wavenumber", "BP")
   
-  mean_BP_97[j] <- mean(final.df$BP[final.df$wavenumber == 1], na.rm = T)
+  mean_BP_97[j] <-  mean(final.df$BP[final.df$wavenumber == 1], na.rm = T)
   mean_BP_99[j] <- mean(final.df$BP[final.df$wavenumber == 2], na.rm = T)
   mean_BP_00[j] <- mean(final.df$BP[final.df$wavenumber == 3], na.rm = T)
-  
+
   final.df <- 
     unique(left_join(sample.analog[,
                          c("folio", "wavenumber", "loc_id", "hh_log_wages" , "hh_kids" , 
@@ -956,46 +1016,164 @@ while(j <= B) { #generating the bootstrap
 
 boot <- as.data.frame(cbind(mean_BP_97, mean_BP_99, mean_BP_00, boot_t,  DiD, # BP Values
                             # saving: Animal Products
-                            LPM.Marginal.Lard  , RHS.Lard  , Poisson.Marginal.Lard , Cross.Partial.Lard ,
-                              LPM.Marginal.Tuna  , RHS.Tuna  , Poisson.Marginal.Tuna , Cross.Partial.Tuna , 
-                              LPM.Marginal.Fish  , RHS.Fish  , Poisson.Marginal.Fish , Cross.Partial.Fish , 
-                              LPM.Marginal.Milk  , RHS.Milk  , Poisson.Marginal.Milk , Cross.Partial.Milk , 
-                              LPM.Marginal.Eggs  , RHS.Eggs  , Poisson.Marginal.Eggs , Cross.Partial.Eggs , 
-                              LPM.Marginal.Chicken  , RHS.Chicken , Poisson.Marginal.Chicken , Cross.Partial.Chicken , 
+                            LPM.Marginal.Lard  , RHS.Lard  ,          Poisson.Marginal.Lard , Cross.Partial.Lard ,
+                              LPM.Marginal.Tuna  , RHS.Tuna  ,        Poisson.Marginal.Tuna , Cross.Partial.Tuna , 
+                              LPM.Marginal.Fish  , RHS.Fish  ,        Poisson.Marginal.Fish , Cross.Partial.Fish , 
+                              LPM.Marginal.Milk  , RHS.Milk  ,        Poisson.Marginal.Milk , Cross.Partial.Milk , 
+                              LPM.Marginal.Eggs  , RHS.Eggs  ,        Poisson.Marginal.Eggs , Cross.Partial.Eggs , 
+                              LPM.Marginal.Chicken  , RHS.Chicken ,   Poisson.Marginal.Chicken , Cross.Partial.Chicken , 
                               LPM.Marginal.BeefPork , RHS.BeefPork  , Poisson.Marginal.BeefPork , Cross.Partial.BeefPork ,  
                             # saving: Fruits and Vegetabels 
-                            LPM.Marginal.Tomato , RHS.Tomato  , Poisson.Marginal.Tomato , Cross.Partial.Tomato , 
-                              LPM.Marginal.Carrots , RHS.Carrots , Poisson.Marginal.Carrots , Cross.Partial.Carrots , 
-                              LPM.Marginal.Greens  , RHS.Greens  , Poisson.Marginal.Greens , Cross.Partial.Greens , 
-                              LPM.Marginal.Banana  , RHS.Banana  ,  Poisson.Marginal.Banana , Cross.Partial.Banana , 
-                              LPM.Marginal.Potato  ,  RHS.Potato  , Poisson.Marginal.Potato , Cross.Partial.Potato , 
-                              LPM.Marginal.Orange  , RHS.Orange  , Poisson.Marginal.Orange , Cross.Partial.Orange , 
-                              LPM.Marginal.Apple  , RHS.Apple  ,  Poisson.Marginal.Apple , Cross.Partial.Apple , 
-                              LPM.Marginal.Onion  , RHS.Onion  ,  Poisson.Marginal.Onion ,  Cross.Partial.Onion , 
-                              LPM.Marginal.Lime  , RHS.Lime  , Poisson.Marginal.Lime , Cross.Partial.Lime ,
+                            LPM.Marginal.Tomato , RHS.Tomato  ,      Poisson.Marginal.Tomato , Cross.Partial.Tomato , 
+                              LPM.Marginal.Carrots , RHS.Carrots ,   Poisson.Marginal.Carrots , Cross.Partial.Carrots , 
+                              LPM.Marginal.Greens  , RHS.Greens  ,   Poisson.Marginal.Greens , Cross.Partial.Greens , 
+                              LPM.Marginal.Banana  , RHS.Banana  ,   Poisson.Marginal.Banana , Cross.Partial.Banana , 
+                              LPM.Marginal.Potato  ,  RHS.Potato  ,  Poisson.Marginal.Potato , Cross.Partial.Potato , 
+                              LPM.Marginal.Orange  , RHS.Orange  ,   Poisson.Marginal.Orange , Cross.Partial.Orange , 
+                              LPM.Marginal.Apple  , RHS.Apple  ,     Poisson.Marginal.Apple , Cross.Partial.Apple , 
+                              LPM.Marginal.Onion  , RHS.Onion  ,     Poisson.Marginal.Onion ,  Cross.Partial.Onion , 
+                              LPM.Marginal.Lime  , RHS.Lime  ,       Poisson.Marginal.Lime , Cross.Partial.Lime ,
                             # saving: Grains
-                            LPM.Marginal.WFlour    ,  RHS.WFlour  , Poisson.Marginal.WFlour , Cross.Partial.WFlour , 
-                              LPM.Marginal.CFlour    , RHS.CFlour  , Poisson.Marginal.CFlour , Cross.Partial.CFlour , 
-                              LPM.Marginal.Rice      , RHS.Rice  , Poisson.Marginal.Rice , Cross.Partial.Rice , 
-                              LPM.Marginal.Beans     , RHS.Beans  , Poisson.Marginal.Beans , Cross.Partial.Beans , 
+                            LPM.Marginal.WFlour    ,  RHS.WFlour  ,    Poisson.Marginal.WFlour , Cross.Partial.WFlour , 
+                              LPM.Marginal.CFlour    , RHS.CFlour  ,   Poisson.Marginal.CFlour , Cross.Partial.CFlour , 
+                              LPM.Marginal.Rice      , RHS.Rice  ,     Poisson.Marginal.Rice , Cross.Partial.Rice , 
+                              LPM.Marginal.Beans     , RHS.Beans  ,    Poisson.Marginal.Beans , Cross.Partial.Beans , 
                               LPM.Marginal.Biscuits  , RHS.Biscuits  , Poisson.Marginal.Biscuits , Cross.Partial.Biscuits , 
-                              LPM.Marginal.WBread , RHS.WBread , Poisson.Marginal.WBread , Cross.Partial.WBread, 
+                              LPM.Marginal.WBread , RHS.WBread ,       Poisson.Marginal.WBread , Cross.Partial.WBread, 
                               LPM.Marginal.Tortillas , RHS.Tortillas , Poisson.Marginal.Tortillas , Cross.Partial.Tortillas ,
                             # saving: Misc
-                            LPM.Marginal.Sugar   , RHS.Sugar  , Poisson.Marginal.Sugar , Cross.Partial.Sugar ,
-                              LPM.Marginal.Coffee  , RHS.Coffee  , Poisson.Marginal.Coffee , Cross.Partial.Coffee ,
-                              LPM.Marginal.Soda    , RHS.Soda  , Poisson.Marginal.Soda , Cross.Partial.Soda ,
+                            LPM.Marginal.Sugar   , RHS.Sugar  ,      Poisson.Marginal.Sugar , Cross.Partial.Sugar ,
+                              LPM.Marginal.Coffee  , RHS.Coffee  ,   Poisson.Marginal.Coffee , Cross.Partial.Coffee ,
+                              LPM.Marginal.Soda    , RHS.Soda  ,     Poisson.Marginal.Soda , Cross.Partial.Soda ,
                               LPM.Marginal.CNoodles, RHS.CNoodles  , Poisson.Marginal.CNoodles , Cross.Partial.CNoodles , 
-                              LPM.Marginal.VOil    , RHS.VOil  ,  Poisson.Marginal.VOil , Cross.Partial.VOil , 
+                              LPM.Marginal.VOil    , RHS.VOil  ,     Poisson.Marginal.VOil , Cross.Partial.VOil , 
                               LPM.Marginal.Alcohol ,  RHS.Alcohol  , Poisson.Marginal.Alcohol , Cross.Partial.Alcohol , 
-                              LPM.Marginal.Pastries , RHS.Pastries ,  Poisson.Marginal.Pastries , Cross.Partial.Pastries, 
-                              LPM.Marginal.BCereal , RHS.BCereal  , Poisson.Marginal.BCereal , Cross.Partial.BCereal))
+                              LPM.Marginal.Pastries , RHS.Pastries , Poisson.Marginal.Pastries , Cross.Partial.Pastries, 
+                              LPM.Marginal.BCereal , RHS.BCereal  ,  Poisson.Marginal.BCereal , Cross.Partial.BCereal))
 
-write.csv(boot, file = "Bootstrap_Results_First_30.csv")
+write.csv(boot, file = "Bootstrap_Results_2_28_19.csv")
 
 # Generating the Efron Intervals ####
 
-p.sorted <- apply(p,2,sort,decreasing=F)
+# Did Progresa increase women's bargaining power? 
+critical.pivot <- 0.1722391 - ( 0.002918 * quantile(boot_t,probs=c(.975,.025)))
+critical.pivot # Yes, we reject at the 95% level the null that it did not. 
+
+# Did Progresa increase the associated 
+quantile(boot[,"DiD"],probs=c(.05,.95))
+
+
+# LPM Animals:
+map(.x = list(LPM.Marginal.Lard  ,  LPM.Marginal.Tuna  , LPM.Marginal.Fish  , LPM.Marginal.Milk  , 
+        LPM.Marginal.Eggs  , LPM.Marginal.Chicken, LPM.Marginal.BeefPork), 
+    .f = function(x) { 
+      quantile(x ,probs=c(.05,.95))})
+
+# LPM Veg: 
+map(.x = list(LPM.Marginal.Tomato , 
+              LPM.Marginal.Carrots ,
+              LPM.Marginal.Greens  ,
+              LPM.Marginal.Banana  ,
+              LPM.Marginal.Potato  ,
+              LPM.Marginal.Orange  ,
+              LPM.Marginal.Apple  ,
+              LPM.Marginal.Onion  ,
+              LPM.Marginal.Lime), 
+    .f = function(x) { 
+      quantile(x ,probs=c(.05,.95))})
+
+
+
+map(.x = list(LPM.Marginal.WFlour   , 
+              LPM.Marginal.CFlour    ,
+              LPM.Marginal.Rice     ,
+              LPM.Marginal.Beans    ,
+              LPM.Marginal.Biscuits ,
+              LPM.Marginal.WBread , 
+              LPM.Marginal.Tortillas ),
+    .f = function(x) { 
+      quantile(x ,probs=c(.05,.95))})
+
+        
+map(.x = list( LPM.Marginal.Sugar   ,
+               LPM.Marginal.Coffee  ,
+               LPM.Marginal.Soda    ,
+               LPM.Marginal.CNoodles,
+               LPM.Marginal.VOil    ,
+               LPM.Marginal.Alcohol ,
+               LPM.Marginal.Pastries,
+               LPM.Marginal.BCereal ), 
+    .f = function(x) { 
+      quantile(x ,probs=c(.05,.95))})
+
+# Intensive Margin
+
+# Animal Products
+map(.x = list( Poisson.Marginal.Lard ,
+               Poisson.Marginal.Tuna ,
+               Poisson.Marginal.Fish ,
+               Poisson.Marginal.Milk ,
+               Poisson.Marginal.Eggs ,
+               Poisson.Marginal.Chicken,
+               Poisson.Marginal.BeefPork), 
+    .f = function(x) { 
+      quantile(x ,probs=c(.05,.95))})
+
+
+# Fruit and veg
+map(.x = list( Poisson.Marginal.Tomato , 
+               Poisson.Marginal.Carrots ,
+               Poisson.Marginal.Greens , 
+               Poisson.Marginal.Banana , 
+               Poisson.Marginal.Potato , 
+               Poisson.Marginal.Orange , 
+               Poisson.Marginal.Apple , 
+               Poisson.Marginal.Onion ,  
+               Poisson.Marginal.Lime), 
+    .f = function(x) { 
+      quantile(x ,probs=c(.05,.95))})
+
+
+map(.x = list( Poisson.Marginal.WFlour , 
+               Poisson.Marginal.CFlour , 
+               Poisson.Marginal.Rice , 
+               Poisson.Marginal.Beans , 
+               Poisson.Marginal.Biscuits ,
+               Poisson.Marginal.WBread , 
+               Poisson.Marginal.Tortillas), 
+    .f = function(x) { 
+      quantile(x ,probs=c(.05,.95))})
+
+map(.x = list( Poisson.Marginal.Sugar , 
+               Poisson.Marginal.Coffee ,
+               Poisson.Marginal.Soda , 
+               Poisson.Marginal.CNoodles,
+               Poisson.Marginal.VOil , 
+               Poisson.Marginal.Alcohol ,
+               Poisson.Marginal.Pastries, 
+               Poisson.Marginal.BCereal ), 
+    .f = function(x) { 
+      quantile(x ,probs=c(.05,.95))})
+
+
+
+
+
+
+
+
+
+
+
+          
+        
+        
+        
+        
+        
+    
+
+
 
 quantile(p.sorted[,"LPM.Marginal"],probs=c(.025,.975))
 quantile(p.sorted[,"Poisson.Marginal"],probs=c(.025,.975))
@@ -1007,8 +1185,6 @@ quantile(p.sorted[,"RHS"],probs=c(.025,.975))
 quantile(p.sorted[,"DiD"],probs=c(.025,.975))
 quantile(p.sorted[,"boot_t"],probs=c(.025,.975))
 
-critical.pivot <- 0.088 - (0.02499164 * quantile(boot_t,probs=c(.975,.025)))
-critical.pivot
 
 
 
