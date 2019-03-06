@@ -435,7 +435,7 @@ LPM_ME_Fun_misc <- function(food_name){
   # print(i)
   p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
-               veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + breakfast.cereal.price_hybrid + 
+               veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
@@ -1028,7 +1028,7 @@ results.df <- data.frame(
   c("Chicken", "Beef/Pork","Eggs" , "Milk" ,"Fish" , "Tuna" , "Lard" ,
     "Onion"  , "Limes"  , "Apples" , "Oranges" , "Potatoes" , "Bananas" , "Greens" , "Carrots" ,
     "Tomatoes" , "Rice"     , "Beans"    , "Biscuits" , "Corn Flour"   , "White Bread"   , "Pastries" , "Tortillas",
-    "Wheat Flour",    "Sugar"  , "Coffee" , "Soda"  , "Cup Noodles"   , "Vegetable Oil"   , "Alcohol", "Breakfast Cereal"),  
+    "Wheat Flour",    "Sugar"  , "Coffee" , "Soda"  , "Cup Noodles"   , "Veg. Oil"   , "Alcohol", "B. Cereal"),  
   c(la.chick, la.BPork,la.eggs , la.milk ,la.fish , la.tuna ,la.lard ,
     lVF.onion  ,lVF.limes  ,lVF.apples ,lVF.orange , lVF.potato ,lVF.banana ,lVF.greens ,lVF.carrot ,
     lVF.tomato , lG.rice, lG.beans,   lG.biscuits, 
@@ -1041,13 +1041,13 @@ results.df <- data.frame(
     lM2.CupN   ,lM2.VOil   ,lM2.Alcohol,lM2.BCereal), 
   c(pa.chick,     pa.BPork,     pa.eggs ,     pa.milk ,     pa.fish ,     pa.tuna ,     pa.lard ,     pVF.onion ,
     pVF.limes ,     pVF.apples ,     pVF.oranges,     pVF.potato ,     pVF.banana ,     pVF.greens ,     pVF.carrots, 
-    pVF.tomato ,     pG.rice      ,     pG.beans     ,     pG.biscuits  ,     pG.Wflour    ,     pG.Wbread    ,   
+    pVF.tomato ,     pG.rice      ,     pG.beans     ,     pG.biscuits  ,     pG.Cflour    ,     pG.Wbread    ,   
     pG.Pastries  ,     pG.Tortillas ,     pG.WFlour   ,     pM.sugar  ,     pM.coffee ,     pM.soda   ,     pM.CupN   , 
     pM.VOil   ,     pM.Alcohol,     pM.BCereal), 
   c(pa2.chick,     pa2.BPork,     pa2.eggs ,     pa2.milk ,     pa2.fish ,     pa2.tuna ,     pa2.lard ,     pVF2.onion ,
     pVF2.limes ,     pVF2.apples ,     pVF2.oranges,     pVF2.potato ,     pVF2.banana ,     pVF2.greens ,     pVF2.carrots, 
-    pVF2.tomato ,     pG2.rice      ,     pG2.beans     ,     pG2.biscuits  , pG2.WFlour,     pG2.Wbread    ,   
-    pG2.Pastries  ,     pG2.Tortillas ,     pG2.WFlour   ,     pM2.sugar  ,     pM2.coffee ,     pM2.soda   ,     pM2.CupN   , 
+    pVF2.tomato ,     pG2.rice      ,     pG2.beans     ,     pG2.biscuits  , pG2.Cflour,     pG2.Wbread    ,   
+    pG2.Pastries  ,     pG2.Tortillas ,   pG2.WFlour ,     pM2.sugar  ,     pM2.coffee ,     pM2.soda   ,     pM2.CupN   , 
     pM2.VOil   ,     pM2.Alcohol,     pM2.BCereal))
   )
    
@@ -1060,6 +1060,7 @@ results.df$Poi <- as.numeric(as.character(results.df$Poi))
 results.df$Cross <- as.numeric(as.character(results.df$Cross))
 
 results.df <- as.tibble(results.df)
+results.df
 
 # Chapter 8: Constructing the Results Figures #### 
 boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_04_19.csv")
@@ -1140,32 +1141,44 @@ results.df[c(8:16),] <- results.df[c(12, 13, 11, 10, 14, 9, 15, 16, 8),] # reord
 results.df[c(17:24),] <- results.df[c(20, 22, 21, 17, 24, 18, 23, 19),] # reorder to make the graph look nice
 results.df[c(25:31),] <- results.df[c(27, 28, 26, 31, 30, 25, 29),] # reorder to make the graph look nice
 
-panel_1 <- ggplot(data = results.df) + geom_point(mapping = aes(x = Names, y = LPM)) + 
-  geom_errorbar(mapping = aes(x = Names, y = LPM, ymin=lpm.low, ymax=lpm.high)) + 
-  scale_x_discrete(limits = results.df$Names,
+results.df <- results.df[c(25:31, 17:24, 8:16, 1:7),]
+
+results.df$Significant <- ifelse(results.df$lpm.low > 0, 1, 0)
+results.df$Significant <- factor(ifelse(results.df$lpm.high < 0, 1, 
+                                        results.df$Significant))
+levels(results.df$Significant) <- c("No", "Yes")
+
+panel_1 <- ggplot(data = results.df) +
+  geom_point(mapping = aes(x = Names, y = LPM)) + 
+  geom_errorbar(mapping = aes(x = Names,
+                              y = LPM,
+                              ymin=lpm.low,
+                              ymax=lpm.high, 
+                              color = Significant)) + 
+ scale_x_discrete(limits = results.df$Names,
                    labels = results.df$Names) +
-    # scale_x_discrete(limits = results.df$Names,
-  #                  labels = c("A1", "A2", "A3", 
-  #                            "A4", "A5", "A6", 
-  #                            "A7", "FV1", "FV2",
-  #                            "FV3", "FV4", "FV5", "FV6", "FV7", 
-  #                            "FV8", "FV9",
-  #                            "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", 
-  #                            "O1", "O2", "O3", "O4", "O5", "O6", "O7")) +
   geom_hline(yintercept=0, linetype = "dashed") +
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=16.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(axis.text.x = element_text(color="navy", 
-                                  size=12, angle=90), 
-        axis.ticks = element_blank()) + 
-  labs(title = "Linear Probability Model Results", 
-       y = "Point Estimate and CI")  
+  theme(axis.ticks = element_blank(), 
+     # axis.text.y = element_blank(),
+      axis.title.y = element_blank(),
+      legend.position="none") +
+  labs(title = "Linear Probability Model Results", y = " ")  + 
+  coord_flip()
+
+panel_1
   
+results.df$Significant <- ifelse(results.df$poi.low > 0, 1, 0)
+results.df$Significant <- factor(ifelse(results.df$poi.high < 0, 1, 
+                                        results.df$Significant))
+levels(results.df$Significant) <- c("No", "Yes")
 
 panel_2 <- ggplot(data = results.df) + 
   geom_point(mapping = aes(x = Names, y = Poi)) + 
-  geom_errorbar(mapping = aes(x = Names, y = Poi, ymin=poi.low, ymax=poi.high)) + 
+  geom_errorbar(mapping = aes(x = Names, y = Poi, ymin=poi.low, ymax=poi.high,
+                              color = Significant)) + 
   scale_x_discrete(limits = results.df$Names,
                    labels = results.df$Names) +
     # scale_x_discrete(limits = results.df$Names,
@@ -1180,17 +1193,26 @@ panel_2 <- ggplot(data = results.df) +
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=16.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(axis.text.x = element_text(color="navy", 
-                                   size=12, angle=90), 
-        axis.ticks = element_blank()) + 
+  theme(axis.text.y = element_blank(), 
+        axis.title.y = element_blank(),
+        axis.ticks = element_blank(), 
+        legend.position = "none") + 
   labs(title = "Count Data Model Results", 
-       y = "Point Estimate and CI")  
+       y = "Point Estimate and CI")  + coord_flip()
+
+panel_2
+
+results.df$Significant <- ifelse(results.df$sq.low > 0, 1, 0)
+results.df$Significant <- factor(ifelse(results.df$sq.high < 0, 1, 
+                                        results.df$Significant))
+levels(results.df$Significant) <- c("No", "Yes")
 
 panel_3 <- ggplot(data = results.df) + 
   geom_point(mapping = aes(x = Names, y = Squared)) + 
-  geom_errorbar(mapping = aes(x = Names, y = Squared, ymin=sq.low, ymax=sq.high)) + 
-  scale_x_discrete(limits = results.df$Names,
-                   labels = results.df$Names) +
+  geom_errorbar(mapping = aes(x = Names, y = Squared, ymin=sq.low, ymax=sq.high, 
+                              color = Significant)) + 
+ # scale_x_discrete(limits = results.df$Names,
+#                   labels = results.df$Names) +
   # scale_x_discrete(limits = results.df$Names,
   #                  labels = c("A1", "A2", "A3", 
   #                             "A4", "A5", "A6", 
@@ -1203,40 +1225,71 @@ panel_3 <- ggplot(data = results.df) +
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=16.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(axis.text.x = element_text(color="navy", 
-                                   size=12, angle=90), 
-        axis.ticks = element_blank()) + 
-  labs(title = "Count Data Model Results", 
-       y = "Point Estimate and CI")  
+  theme(#axis.text.x = element_text(color="navy", size=12, angle=90), 
+        axis.ticks = element_blank(), 
+        axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position="none") + 
+  labs(title = "Power Squared Results", y = " ")  + 
+  coord_flip()
 
+panel_3
+
+
+results.df$Significant <- ifelse(results.df$c.low > 0, 1, 0)
+results.df$Significant <- factor(ifelse(results.df$c.high < 0, 1, 
+                                        results.df$Significant))
+levels(results.df$Significant) <- c("No", "Yes")
 
 panel_4 <- ggplot(data = results.df) + geom_point(mapping = aes(x = Names, y = Cross)) + 
-  geom_errorbar(mapping = aes(x = Names, y = Cross, ymin=c.low, ymax=c.high)) + 
+  geom_errorbar(mapping = aes(x = Names, y = Cross, ymin=c.low, ymax=c.high, 
+                              color = Significant)) + 
   scale_x_discrete(limits = results.df$Names,
                    labels = results.df$Names) +
   geom_hline(yintercept=0, linetype = "dashed") +
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=16.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(axis.text.x = element_text(color="navy", 
-                                   size=12, angle=90), 
-        axis.ticks = element_blank()) + 
-  labs(title = "Cross Partials", 
-       y = "Point Estimate and CI")  
+  theme(axis.text.y = element_blank(), # element_text(color="navy", size=12, angle=90), 
+        axis.title.y = element_blank(),
+         axis.ticks = element_blank()) + 
+  labs(title = "Cross Partials", y = "Point Estimate and CI")  +
+  coord_flip()
 
 panel_4
 
-cowplot::plot_grid(panel_1, panel_2, panel_4 ,labels = c("A", "C", "D"))
+#cowplot::plot_grid(panel_1, panel_2, panel_4 ,labels = c("A", "C", "D"))
 
-cowplot::plot_grid(panel_1, panel_2, panel_3, panel_4 ,labels = c("A", "B", "C", "D"))
+p <- cowplot::plot_grid(panel_1, panel_2, panel_3, panel_4, 
+                   align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
+                   nrow=1)
 
+p
 
 # Check that the right confidence intervals are paired with the right foods. 
 colnames(select(boots, starts_with("LPM")))
 colnames(select(boots, starts_with("Poisson")))
 
 
-         
+# put a tiger on it: 
+library(magick)
+library(cowplot)
+ggdraw() +
+  draw_image("http://jeroen.github.io/images/tiger.svg") +
+  draw_plot(panel_1)
+
+ggdraw() +
+  draw_image("http://jeroen.github.io/images/tiger.svg") +
+  draw_plot(p)
+
+# Put my face on it:
+library(magick)
+library(cowplot)
+ggdraw() +
+  draw_image("https://pbs.twimg.com/profile_images/1000060649421004800/ZzEbv1o__400x400.jpg") +
+  draw_plot(panel_1)
+
+
 # Chapter 9: Market Earnings Breakdown Table ####
 
 # Step 0: Verify that the primary employment and the other income source variables are the same 
