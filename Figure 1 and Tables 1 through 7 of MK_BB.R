@@ -452,7 +452,7 @@ Poisson_ME_Fun_misc <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
   p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
                    sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
-                   veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + breakfast.cereal.price_hybrid + 
+                   veg.oil.price_hybrid + sopa.de.pasta.price_hybrid +# breakfast.cereal.price_hybrid + 
                    rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
                  cluster = folio,
                  data = final.df.subset, family = poisson)
@@ -462,20 +462,22 @@ Poisson_ME_Fun_misc <- function(food_name){
   model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids", "wavenumber",
                                         "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
-                                        "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , "breakfast.cereal.price_hybrid" , 
+                                        "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" ,# "breakfast.cereal.price_hybrid" , 
                                         "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
   
   ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
                                                                               as.matrix(model.mat[,
                                                                                                   c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wavenumber",   
                                                                                                     "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
-                                                                                                    "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , "breakfast.cereal.price_hybrid" , 
+                                                                                                    "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , #"breakfast.cereal.price_hybrid" , 
                                                                                                     "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid" )]) %*% 
                                                                               as.numeric(p1$coefficients)), na.rm = T)
   
   Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
   
   return(list(ME, Cross_Partial)) }
+
+# Chapter 1: Estimating BP for each HH in each period ####
 
 sample.analog <- hh.df  
 
@@ -661,44 +663,85 @@ stargazer(hh.df[,food_var_names_num][hh.df$wavenumber == 1,],
 
 # Chapter 4: Generating Tables 4 and 5, the predicted earnings tables ####
 
-data.df <- subset(sample.analog,  sample.analog$age > 15 & sample.analog$sex == 0 &  sample.analog$age <= 70)
+# Women's Subset: 
+women.sub <- subset(hh.df,  
+                  hh.df$sex == 1 &
+                    hh.df$age > 15 &
+                    hh.df$age <= 65 &
+                    hh.df$hh_kids <= 5 & 
+                    hh.df$hh_young_kids <= 4 & 
+                    hh.df$num_m_adults <= 5 &
+                    hh.df$num_f_adults <= 5 & 
+                    hh.df$hh_young_kids <= quantile(hh.df$hh_young_kids, 0.95))
+# Drop the income outliers who make prediction far less accurate
+women.sub$drop <- ifelse(!is.na(women.sub$log_wages) &  women.sub$log_wages >=  quantile(women.sub$log_wages, c(0.99), na.rm=T), 1, 0)
+women.sub$drop <- ifelse(!is.na(women.sub$log_wages) & women.sub$log_wages <=  quantile(women.sub$log_wages, c(0.01), na.rm=T), 1, women.sub$drop)
+women.sub <- women.sub %>% filter(drop == 0)
 
-selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-  number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-  as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
-  ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults + proportion_need_permission + proportion_need_accompany  
+# Men's Subset: 
+men.sub <- subset(hh.df,  
+                    hh.df$sex == 0 &
+                      hh.df$age > 15 &
+                      hh.df$age <= 65 &
+                      hh.df$hh_kids <= 5 & 
+                      hh.df$hh_young_kids <= 4 & 
+                      hh.df$num_m_adults <= 5 &
+                      hh.df$num_f_adults <= 5 & 
+                      hh.df$hh_young_kids <= quantile(hh.df$hh_young_kids, 0.95))
+# Drop the income outliers who make prediction far less accurate
+men.sub$drop <- ifelse(!is.na(men.sub$log_wages) &  men.sub$log_wages >=  quantile(men.sub$log_wages, c(0.99), na.rm=T), 1, 0)
+men.sub$drop <- ifelse(!is.na(men.sub$log_wages) & men.sub$log_wages <=  quantile(men.sub$log_wages, c(0.01), na.rm=T), 1, men.sub$drop)
+men.sub <- men.sub %>% filter(drop == 0)
 
-outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-  number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +
-  as.factor(year_wave_FE) + treatment_dummy    
+# Earnings Models
+men.reg <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+                     hh_young_kids + edu_yrs + literate + gov_transfer +
+                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+                     number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                     I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                     I(num_f_adults*prop_usa_migrant) +    
+                     as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+                     (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
+                   outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+                     hh_young_kids + edu_yrs  + literate + gov_transfer +
+                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
+                     number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                     I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                     I(num_f_adults*prop_usa_migrant) +    
+                     as.factor(year_wave_FE) + receive_progresa,
+                   data = men.sub,
+                   method = "ml")
+  
 
-reg_men <- selection(selection_formula, outcome_formula, data = data.df, method = "ml")
-summary(reg_men)
+women.reg <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+                     hh_young_kids + edu_yrs  + literate + gov_transfer +
+                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+                     number_female_kids + number_male_kids  + 
+                     prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                     I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
+                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                     I(num_f_adults*prop_usa_migrant) +
+                     as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+                     (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
+                     asinh(progresa_income_mom), 
+                   # 
+                   outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+                     hh_young_kids + edu_yrs  + literate + gov_transfer +
+                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+                     number_female_kids + number_male_kids  +
+                     prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                     I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
+                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                     I(num_f_adults*prop_usa_migrant) +
+                     as.factor(year_wave_FE) + receive_progresa  +  
+                     asinh(progresa_income_mom),
+                   data = women.sub,
+                   method = "ml")  
+  
 
-data.df <- subset(hh.df,  hh.df$age > 15 & hh.df$sex == 1 &  hh.df$age <= 70)
-
-selection_formula <- LFP ~age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-  number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-  as.factor(year_wave_FE) + treatment_dummy + proportion_need_accompany + proportion_need_permission + # FE and Exclusion Restrictions
-  ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults  + progresa_income_mom   # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
-
-outcome_formula <-  log_wages ~age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-  number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-  as.factor(year_wave_FE) + treatment_dummy + 
-  progresa_income_mom # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
-
-reg_women <- selection(selection_formula, outcome_formula, data = data.df, method = "ml")
-summary(reg_women)
-
-stargazer::stargazer(reg_women, reg_men, omit = c("year_wave_FE"), single.row = T)
+stargazer::stargazer(women.reg, men.reg, omit = c("year_wave_FE"), single.row = T)
 
 a <- summary(reg_women)
 b <- summary(reg_men)
@@ -726,24 +769,24 @@ par(mfrow=c(3,1))
 #     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
 
 hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 0], col = rgb(1,1,1,0.25, 0.25), main = "1997", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+     breaks = 100, xlim = c(0.15,0.75), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
 hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 1], col = rgb(0,0,0,0.25, 0.25),  
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+     breaks = 100, xlim = c(0.15,0.75), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
-legend("topright", legend = c("control (white)", "treatment (grey)"), col = c("black", "black"), pch = c(0,15))
+legend("topright", legend = c("Untreated (white)", "Treated (grey)"), col = c("black", "black"), pch = c(0,15))
 
 hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total == 0], col = rgb(1,1,1,0.25, 0.25), main = "1999", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+     breaks = 100, xlim = c(0.15,0.75), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
 hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total > 0], col = rgb(0,0,0,0.25, 0.25), 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+     breaks = 100, xlim = c(0.15,0.75), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
 hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total == 0], col = rgb(1,1,1, 0.25, 0.25), main = "2000", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+     breaks = 100, xlim = c(0.15,0.75), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
 hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0], col = rgb(0,0,0, 0.25, 0.25), 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+     breaks = 100, xlim = c(0.15,0.75), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
 
 # Color Version for website and other media
@@ -828,102 +871,372 @@ stargazer::stargazer(chick_LPM, milk_LPM, chick_LPM, milk_LPM, single.row=T)
 
 # Chapter 7: generating 62 Point Estimate Results ###### 
 
-
 keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & is.na(BP) == FALSE})
 final.df.subset <- final.df[keep.index, ]
 final.df.subset$BP2 <- final.df.subset$BP^2
 
-Poisson_ME_Fun_animal("pollo_num_times_consume")
-#Poisson_ME_Fun_animal("carne.de.cabra.u.oveja_num_times_consume")
-Poisson_ME_Fun_animal("carne.de.res.o.puerco_num_times_consume")
-Poisson_ME_Fun_animal("huevos_num_times_consume")
-Poisson_ME_Fun_animal("leche_num_times_consume")
-Poisson_ME_Fun_animal("pescados.y.mariscos_num_times_consume")       
-Poisson_ME_Fun_animal("sardinas.o.atun.en.lata_num_times_consume")
-Poisson_ME_Fun_animal("manteca.de.cerdo_num_times_consume")
+pa.chick <- Poisson_ME_Fun_animal("pollo_num_times_consume")[[1]]
+pa.BPork <- Poisson_ME_Fun_animal("carne.de.res.o.puerco_num_times_consume")[[1]]
+pa.eggs <- Poisson_ME_Fun_animal("huevos_num_times_consume")[[1]]
+pa.milk <- Poisson_ME_Fun_animal("leche_num_times_consume")[[1]]
+pa.fish <- Poisson_ME_Fun_animal("pescados.y.mariscos_num_times_consume")[[1]]
+pa.tuna <- Poisson_ME_Fun_animal("sardinas.o.atun.en.lata_num_times_consume")[[1]]
+pa.lard <- Poisson_ME_Fun_animal("manteca.de.cerdo_num_times_consume")[[1]]
 
-LPM_ME_Fun_animal("pollo")
-#LPM_ME_Fun_animal("carne.de.cabra.u.oveja")
-LPM_ME_Fun_animal("carne.de.res.o.puerco")
-LPM_ME_Fun_animal("huevos")
-LPM_ME_Fun_animal("leche")
-LPM_ME_Fun_animal("pescados.y.mariscos")       
-LPM_ME_Fun_animal("sardinas.o.atun.en.lata")
-LPM_ME_Fun_animal("manteca.de.cerdo")
+pa2.chick <- Poisson_ME_Fun_animal("pollo_num_times_consume")[[2]]
+pa2.BPork <- Poisson_ME_Fun_animal("carne.de.res.o.puerco_num_times_consume")[[2]]
+pa2.eggs <- Poisson_ME_Fun_animal("huevos_num_times_consume")[[2]]
+pa2.milk <- Poisson_ME_Fun_animal("leche_num_times_consume")[[2]]
+pa2.fish <- Poisson_ME_Fun_animal("pescados.y.mariscos_num_times_consume")[[2]]
+pa2.tuna <- Poisson_ME_Fun_animal("sardinas.o.atun.en.lata_num_times_consume")[[2]]
+pa2.lard <- Poisson_ME_Fun_animal("manteca.de.cerdo_num_times_consume")[[2]]
+
+la.chick <- LPM_ME_Fun_animal("pollo")[[1]]
+la.BPork <- LPM_ME_Fun_animal("carne.de.res.o.puerco")[[1]]
+la.eggs <- LPM_ME_Fun_animal("huevos")[[1]]
+la.milk <- LPM_ME_Fun_animal("leche")[[1]]
+la.fish <- LPM_ME_Fun_animal("pescados.y.mariscos")[[1]]
+la.tuna <- LPM_ME_Fun_animal("sardinas.o.atun.en.lata")[[1]]
+la.lard <- LPM_ME_Fun_animal("manteca.de.cerdo")[[1]]
+
+la2.chick <- LPM_ME_Fun_animal("pollo")[[2]]
+la2.BPork <- LPM_ME_Fun_animal("carne.de.res.o.puerco")[[2]]
+la2.eggs <- LPM_ME_Fun_animal("huevos")[[2]]
+la2.milk <- LPM_ME_Fun_animal("leche")[[2]]
+la2.fish <- LPM_ME_Fun_animal("pescados.y.mariscos")[[2]]
+la2.tuna <- LPM_ME_Fun_animal("sardinas.o.atun.en.lata")[[2]]
+la2.lard <- LPM_ME_Fun_animal("manteca.de.cerdo")[[2]]
 
 
 #FRUITS AND VEGETABLES
 
-Poisson_ME_Fun_VF("cebolla_num_times_consume")
-Poisson_ME_Fun_VF("limones_num_times_consume")
-Poisson_ME_Fun_VF("manzanas_num_times_consume")
-Poisson_ME_Fun_VF("narajas_num_times_consume")
-Poisson_ME_Fun_VF("papa_num_times_consume")
-Poisson_ME_Fun_VF("platanos_num_times_consume")
-Poisson_ME_Fun_VF("verdudas.de.hoja_num_times_consume")
-Poisson_ME_Fun_VF("zanahorias_num_times_consume")
-Poisson_ME_Fun_VF("tomate.rojo_num_times_consume")
+pVF.onion <- Poisson_ME_Fun_VF("cebolla_num_times_consume")[[1]]
+pVF.limes <- Poisson_ME_Fun_VF("limones_num_times_consume")[[1]]
+pVF.apples <- Poisson_ME_Fun_VF("manzanas_num_times_consume")[[1]]
+pVF.oranges <- Poisson_ME_Fun_VF("narajas_num_times_consume")[[1]]
+pVF.potato <- Poisson_ME_Fun_VF("papa_num_times_consume")[[1]]
+pVF.banana <- Poisson_ME_Fun_VF("platanos_num_times_consume")[[1]]
+pVF.greens <- Poisson_ME_Fun_VF("verdudas.de.hoja_num_times_consume")[[1]]
+pVF.carrots <- Poisson_ME_Fun_VF("zanahorias_num_times_consume")[[1]]
+pVF.tomato <- Poisson_ME_Fun_VF("tomate.rojo_num_times_consume")[[1]]
 
-LPM_ME_Fun_VF("cebolla")
-LPM_ME_Fun_VF("limones")
-LPM_ME_Fun_VF("manzanas")
-LPM_ME_Fun_VF("narajas")
-LPM_ME_Fun_VF("papa")
-LPM_ME_Fun_VF("platanos")
-LPM_ME_Fun_VF("verdudas.de.hoja")
-LPM_ME_Fun_VF("zanahorias")
-LPM_ME_Fun_VF("tomate.rojo")
+pVF2.onion <- Poisson_ME_Fun_VF("cebolla_num_times_consume")[[2]]
+pVF2.limes <- Poisson_ME_Fun_VF("limones_num_times_consume")[[2]]
+pVF2.apples <- Poisson_ME_Fun_VF("manzanas_num_times_consume")[[2]]
+pVF2.oranges <- Poisson_ME_Fun_VF("narajas_num_times_consume")[[2]]
+pVF2.potato <- Poisson_ME_Fun_VF("papa_num_times_consume")[[2]]
+pVF2.banana <- Poisson_ME_Fun_VF("platanos_num_times_consume")[[2]]
+pVF2.greens <- Poisson_ME_Fun_VF("verdudas.de.hoja_num_times_consume")[[2]]
+pVF2.carrots <- Poisson_ME_Fun_VF("zanahorias_num_times_consume")[[2]]
+pVF2.tomato <- Poisson_ME_Fun_VF("tomate.rojo_num_times_consume")[[2]]
 
+lVF.onion  <- LPM_ME_Fun_VF("cebolla")[[1]]
+lVF.limes  <- LPM_ME_Fun_VF("limones")[[1]]
+lVF.apples <- LPM_ME_Fun_VF("manzanas")[[1]]
+lVF.orange <- LPM_ME_Fun_VF("narajas")[[1]]
+lVF.potato <- LPM_ME_Fun_VF("papa")[[1]]
+lVF.banana <- LPM_ME_Fun_VF("platanos")[[1]]
+lVF.greens <- LPM_ME_Fun_VF("verdudas.de.hoja")[[1]]
+lVF.carrot <- LPM_ME_Fun_VF("zanahorias")[[1]]
+lVF.tomato <- LPM_ME_Fun_VF("tomate.rojo")[[1]]
+
+lVF2.onion  <- LPM_ME_Fun_VF("cebolla")[[2]]
+lVF2.limes  <- LPM_ME_Fun_VF("limones")[[2]]
+lVF2.apples <- LPM_ME_Fun_VF("manzanas")[[2]]
+lVF2.orange <- LPM_ME_Fun_VF("narajas")[[2]]
+lVF2.potato <- LPM_ME_Fun_VF("papa")[[2]]
+lVF2.banana <- LPM_ME_Fun_VF("platanos")[[2]]
+lVF2.greens <- LPM_ME_Fun_VF("verdudas.de.hoja")[[2]]
+lVF2.carrot <- LPM_ME_Fun_VF("zanahorias")[[2]]
+lVF2.tomato <- LPM_ME_Fun_VF("tomate.rojo")[[2]]
 
 #PULSES AND GRAINS
 
-Poisson_ME_Fun_grains("arroz_num_times_consume")
-Poisson_ME_Fun_grains("frijol_num_times_consume")
-Poisson_ME_Fun_grains("galletas_num_times_consume")
-Poisson_ME_Fun_grains("maiz.en.grano_num_times_consume")
-Poisson_ME_Fun_grains("pan.blanco_num_times_consume")
-#Poisson_ME_Fun_grains("pan.de.caja_num_times_consume")
-Poisson_ME_Fun_grains("pan.de.dulce_num_times_consume")
-#Poisson_ME_Fun_grains("pastelillos.en.bolsa_num_times_consume")
-Poisson_ME_Fun_grains("tortialls.de.maiz_num_times_consume")
-Poisson_ME_Fun_grains("harina.de.trigo_num_times_consume")
+pG.rice      <- Poisson_ME_Fun_grains("arroz_num_times_consume")[[1]]
+pG.beans     <- Poisson_ME_Fun_grains("frijol_num_times_consume")[[1]]
+pG.biscuits  <- Poisson_ME_Fun_grains("galletas_num_times_consume")[[1]]
+pG.Cflour    <- Poisson_ME_Fun_grains("maiz.en.grano_num_times_consume")[[1]]
+pG.Wbread    <- Poisson_ME_Fun_grains("pan.blanco_num_times_consume")[[1]]
+pG.Pastries  <- Poisson_ME_Fun_grains("pan.de.dulce_num_times_consume")[[1]]
+pG.Tortillas <- Poisson_ME_Fun_grains("tortialls.de.maiz_num_times_consume")[[1]]
+pG.WFlour    <- Poisson_ME_Fun_grains("harina.de.trigo_num_times_consume")[[1]]
 
-LPM_ME_Fun_grains("arroz")
-LPM_ME_Fun_grains("frijol")
-LPM_ME_Fun_grains("galletas")
-LPM_ME_Fun_grains("maiz.en.grano")
-LPM_ME_Fun_grains("harina.de.trigo")
-LPM_ME_Fun_grains("pan.blanco")
-#LPM_ME_Fun_grains("pan.de.caja")
-LPM_ME_Fun_grains("pan.de.dulce")
-#LPM_ME_Fun_grains("pastelillos.en.bolsa")
-LPM_ME_Fun_grains("tortialls.de.maiz")
+pG2.rice      <- Poisson_ME_Fun_grains("arroz_num_times_consume")[[2]]
+pG2.beans     <- Poisson_ME_Fun_grains("frijol_num_times_consume")[[2]]
+pG2.biscuits  <- Poisson_ME_Fun_grains("galletas_num_times_consume")[[2]]
+pG2.Cflour    <- Poisson_ME_Fun_grains("maiz.en.grano_num_times_consume")[[2]]
+pG2.Wbread    <- Poisson_ME_Fun_grains("pan.blanco_num_times_consume")[[2]]
+pG2.Pastries  <- Poisson_ME_Fun_grains("pan.de.dulce_num_times_consume")[[2]]
+pG2.Tortillas <- Poisson_ME_Fun_grains("tortialls.de.maiz_num_times_consume")[[2]]
+pG2.WFlour    <- Poisson_ME_Fun_grains("harina.de.trigo_num_times_consume")[[2]]
 
+lG.rice       <- LPM_ME_Fun_grains("arroz")[[1]]
+lG.beans     <- LPM_ME_Fun_grains("frijol")[[1]]
+lG.biscuits  <- LPM_ME_Fun_grains("galletas")[[1]]
+lG.Cflour    <- LPM_ME_Fun_grains("maiz.en.grano")[[1]]
+lG.Wbread    <- LPM_ME_Fun_grains("pan.blanco")[[1]]
+lG.Pastries  <- LPM_ME_Fun_grains("pan.de.dulce")[[1]]
+lG.Tortillas <-  LPM_ME_Fun_grains("tortialls.de.maiz")[[1]]
+lG.WFlour    <- LPM_ME_Fun_grains("harina.de.trigo")[[1]]
+
+lG2.rice       <- LPM_ME_Fun_grains("arroz")[[2]]
+lG2.beans     <- LPM_ME_Fun_grains("frijol")[[2]]
+lG2.biscuits  <- LPM_ME_Fun_grains("galletas")[[2]]
+lG2.Cflour    <- LPM_ME_Fun_grains("maiz.en.grano")[[2]]
+lG2.Wbread    <- LPM_ME_Fun_grains("pan.blanco")[[2]]
+lG2.Pastries  <- LPM_ME_Fun_grains("pan.de.dulce")[[2]]
+lG2.Tortillas <-  LPM_ME_Fun_grains("tortialls.de.maiz")[[2]]
+lG2.WFlour    <- LPM_ME_Fun_grains("harina.de.trigo")[[2]]
 
 # OTHER 
 
-Poisson_ME_Fun_misc("azucar_num_times_consume")
-Poisson_ME_Fun_misc("cafe_num_times_consume")
-Poisson_ME_Fun_misc("refrescos_num_times_consume")
-Poisson_ME_Fun_misc("sopa.de.pasta_num_times_consume")
-Poisson_ME_Fun_misc("aciete.vegetal_num_times_consume")
-Poisson_ME_Fun_misc("bebidas.alcoholicas_num_times_consume")
-Poisson_ME_Fun_misc("cereales.de.caja_num_times_consume")
+pM.sugar   <- Poisson_ME_Fun_misc("azucar_num_times_consume")[[1]]
+pM.coffee  <- Poisson_ME_Fun_misc("cafe_num_times_consume")[[1]]
+pM.soda    <- Poisson_ME_Fun_misc("refrescos_num_times_consume")[[1]]
+pM.CupN    <- Poisson_ME_Fun_misc("sopa.de.pasta_num_times_consume")[[1]]
+pM.VOil    <- Poisson_ME_Fun_misc("aciete.vegetal_num_times_consume")[[1]]
+pM.Alcohol <- Poisson_ME_Fun_misc("bebidas.alcoholicas_num_times_consume")[[1]]
+pM.BCereal <- Poisson_ME_Fun_misc("cereales.de.caja_num_times_consume")[[1]]
 
-LPM_ME_Fun_misc("azucar")
-LPM_ME_Fun_misc("cafe")
-LPM_ME_Fun_misc("refrescos")
-LPM_ME_Fun_misc("sopa.de.pasta")
-LPM_ME_Fun_misc("aciete.vegetal")
-LPM_ME_Fun_misc("bebidas.alcoholicas")
-LPM_ME_Fun_misc("cereales.de.caja")
+pM2.sugar   <- Poisson_ME_Fun_misc("azucar_num_times_consume")[[2]]
+pM2.coffee  <- Poisson_ME_Fun_misc("cafe_num_times_consume")[[2]]
+pM2.soda    <- Poisson_ME_Fun_misc("refrescos_num_times_consume")[[2]]
+pM2.CupN    <- Poisson_ME_Fun_misc("sopa.de.pasta_num_times_consume")[[2]]
+pM2.VOil    <- Poisson_ME_Fun_misc("aciete.vegetal_num_times_consume")[[2]]
+pM2.Alcohol <- Poisson_ME_Fun_misc("bebidas.alcoholicas_num_times_consume")[[2]]
+pM2.BCereal <- Poisson_ME_Fun_misc("cereales.de.caja_num_times_consume")[[2]]
+
+lM.sugar   <- LPM_ME_Fun_misc("azucar")[[1]]
+lM.coffee  <- LPM_ME_Fun_misc("cafe")[[1]]
+lM.soda    <- LPM_ME_Fun_misc("refrescos")[[1]]
+lM.CupN    <- LPM_ME_Fun_misc("sopa.de.pasta")[[1]]
+lM.VOil    <- LPM_ME_Fun_misc("aciete.vegetal")[[1]]
+lM.Alcohol <- LPM_ME_Fun_misc("bebidas.alcoholicas")[[1]]
+lM.BCereal <- LPM_ME_Fun_misc("cereales.de.caja")[[1]]
+
+lM2.sugar   <- LPM_ME_Fun_misc("azucar")[[2]]
+lM2.coffee  <- LPM_ME_Fun_misc("cafe")[[2]]
+lM2.soda    <- LPM_ME_Fun_misc("refrescos")[[2]]
+lM2.CupN    <- LPM_ME_Fun_misc("sopa.de.pasta")[[2]]
+lM2.VOil    <- LPM_ME_Fun_misc("aciete.vegetal")[[2]]
+lM2.Alcohol <- LPM_ME_Fun_misc("bebidas.alcoholicas")[[2]]
+lM2.BCereal <- LPM_ME_Fun_misc("cereales.de.caja")[[2]]
 
 
+results.df <- data.frame(
+  cbind(
+  c("Chicken", "Beef/Pork","Eggs" , "Milk" ,"Fish" , "Tuna" , "Lard" ,
+    "Onion"  , "Limes"  , "Apples" , "Oranges" , "Potatoes" , "Bananas" , "Greens" , "Carrots" ,
+    "Tomatoes" , "Rice"     , "Beans"    , "Biscuits" , "Corn Flour"   , "White Bread"   , "Pastries" , "Tortillas",
+    "Wheat Flour",    "Sugar"  , "Coffee" , "Soda"  , "Cup Noodles"   , "Vegetable Oil"   , "Alcohol", "Breakfast Cereal"),  
+  c(la.chick, la.BPork,la.eggs , la.milk ,la.fish , la.tuna ,la.lard ,
+    lVF.onion  ,lVF.limes  ,lVF.apples ,lVF.orange , lVF.potato ,lVF.banana ,lVF.greens ,lVF.carrot ,
+    lVF.tomato , lG.rice, lG.beans,   lG.biscuits, 
+    lG.Cflour,   lG.Wbread,   lG.Pastries, lG.Tortillas, lG.WFlour,    lM.sugar  ,lM.coffee ,lM.soda  , 
+    lM.CupN   ,lM.VOil   ,lM.Alcohol,lM.BCereal), 
+  c(la2.chick, la2.BPork,la2.eggs , la2.milk ,la2.fish , la2.tuna ,la2.lard ,
+    lVF2.onion  ,lVF2.limes  ,lVF2.apples ,lVF2.orange , lVF2.potato ,lVF2.banana ,lVF2.greens ,lVF2.carrot ,
+    lVF2.tomato , lG2.rice, lG2.beans,   lG2.biscuits, 
+    lG2.Cflour,   lG2.Wbread,   lG2.Pastries, lG2.Tortillas, lG2.WFlour,    lM2.sugar  ,lM2.coffee ,lM2.soda  , 
+    lM2.CupN   ,lM2.VOil   ,lM2.Alcohol,lM2.BCereal), 
+  c(pa.chick,     pa.BPork,     pa.eggs ,     pa.milk ,     pa.fish ,     pa.tuna ,     pa.lard ,     pVF.onion ,
+    pVF.limes ,     pVF.apples ,     pVF.oranges,     pVF.potato ,     pVF.banana ,     pVF.greens ,     pVF.carrots, 
+    pVF.tomato ,     pG.rice      ,     pG.beans     ,     pG.biscuits  ,     pG.Wflour    ,     pG.Wbread    ,   
+    pG.Pastries  ,     pG.Tortillas ,     pG.WFlour   ,     pM.sugar  ,     pM.coffee ,     pM.soda   ,     pM.CupN   , 
+    pM.VOil   ,     pM.Alcohol,     pM.BCereal), 
+  c(pa2.chick,     pa2.BPork,     pa2.eggs ,     pa2.milk ,     pa2.fish ,     pa2.tuna ,     pa2.lard ,     pVF2.onion ,
+    pVF2.limes ,     pVF2.apples ,     pVF2.oranges,     pVF2.potato ,     pVF2.banana ,     pVF2.greens ,     pVF2.carrots, 
+    pVF2.tomato ,     pG2.rice      ,     pG2.beans     ,     pG2.biscuits  , pG2.WFlour,     pG2.Wbread    ,   
+    pG2.Pastries  ,     pG2.Tortillas ,     pG2.WFlour   ,     pM2.sugar  ,     pM2.coffee ,     pM2.soda   ,     pM2.CupN   , 
+    pM2.VOil   ,     pM2.Alcohol,     pM2.BCereal))
+  )
+   
+
+colnames(results.df) <- c("Names", "LPM", "Squared", "Poi", "Cross")
+
+results.df$LPM <- as.numeric(as.character(results.df$LPM))
+results.df$Squared <- as.numeric(as.character(results.df$Squared))
+results.df$Poi <- as.numeric(as.character(results.df$Poi))
+results.df$Cross <- as.numeric(as.character(results.df$Cross))
+
+results.df <- as.tibble(results.df)
+
+# Chapter 8: Constructing the Results Figures #### 
+boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_04_19.csv")
+boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_05_19.csv")
+boots2 <- boots2[1:500,]
+boots <- bind_rows(boots1, boots2)
+
+boots.lpm <- boots[,c("LPM.Marginal.Chicken", "LPM.Marginal.BeefPork", "LPM.Marginal.Eggs" ,  "LPM.Marginal.Milk" ,
+                      "LPM.Marginal.Fish" ,  "LPM.Marginal.Tuna" , "LPM.Marginal.Lard"  , 
+                      # VegFruits  
+                      "LPM.Marginal.Onion", "LPM.Marginal.Lime", "LPM.Marginal.Apple" ,"LPM.Marginal.Orange"  ,
+                      "LPM.Marginal.Potato" , "LPM.Marginal.Banana", "LPM.Marginal.Greens" , "LPM.Marginal.Carrots" ,
+                      "LPM.Marginal.Tomato"  ,
+                      # Grains
+                      "LPM.Marginal.Rice"     , "LPM.Marginal.Beans"  , "LPM.Marginal.Biscuits", "LPM.Marginal.CFlour"   ,  
+                      "LPM.Marginal.WBread"   ,"LPM.Marginal.Pastries", "LPM.Marginal.Tortillas","LPM.Marginal.WFlour"  ,
+                      # Other
+                      "LPM.Marginal.Sugar"  ,  "LPM.Marginal.Coffee"  , "LPM.Marginal.Soda",  "LPM.Marginal.CNoodles" ,
+                      "LPM.Marginal.VOil"   ,  "LPM.Marginal.Alcohol" ,   "LPM.Marginal.BCereal"  )]
+
+boots.poisson <- boots[,c("Poisson.Marginal.Chicken", "Poisson.Marginal.BeefPork", "Poisson.Marginal.Eggs" ,  "Poisson.Marginal.Milk" ,
+                      "Poisson.Marginal.Fish" ,  "Poisson.Marginal.Tuna" , "Poisson.Marginal.Lard"  , 
+                      # VegFruits  
+                      "Poisson.Marginal.Onion", "Poisson.Marginal.Lime", "Poisson.Marginal.Apple" ,"Poisson.Marginal.Orange"  ,
+                      "Poisson.Marginal.Potato" , "Poisson.Marginal.Banana", "Poisson.Marginal.Greens" , "Poisson.Marginal.Carrots" ,
+                      "Poisson.Marginal.Tomato"  ,
+                      # Grains
+                      "Poisson.Marginal.Rice"     , "Poisson.Marginal.Beans"  , "Poisson.Marginal.Biscuits", "Poisson.Marginal.CFlour"   ,  
+                      "Poisson.Marginal.WBread"   ,"Poisson.Marginal.Pastries", "Poisson.Marginal.Tortillas","Poisson.Marginal.WFlour"  ,
+                      # Other
+                      "Poisson.Marginal.Sugar"  ,  "Poisson.Marginal.Coffee"  , "Poisson.Marginal.Soda",  "Poisson.Marginal.CNoodles" ,
+                      "Poisson.Marginal.VOil"   ,  "Poisson.Marginal.Alcohol" ,   "Poisson.Marginal.BCereal"  )]
+
+boots.BP2 <- boots[,c("LPM.BP2.Chicken", "LPM.BP2.BeefPork", "LPM.BP2.Eggs" ,  "LPM.BP2.Milk" ,
+                          "LPM.BP2.Fish" ,  "LPM.BP2.Tuna" , "LPM.BP2.Lard"  , 
+                          # VegFruits  
+                          "LPM.BP2.Onion", "LPM.BP2.Lime", "LPM.BP2.Apple" ,"LPM.BP2.Orange"  ,
+                          "LPM.BP2.Potato" , "LPM.BP2.Banana", "LPM.BP2.Greens" , "LPM.BP2.Carrots" ,
+                          "LPM.BP2.Tomato"  ,
+                          # Grains
+                          "LPM.BP2.Rice"     , "LPM.BP2.Beans"  , "LPM.BP2.Biscuits", "LPM.BP2.CFlour"   ,  
+                          "LPM.BP2.WBread"   ,"LPM.BP2.Pastries", "LPM.BP2.Tortillas","LPM.BP2.WFlour"  ,
+                          # Other
+                          "LPM.BP2.Sugar"  ,  "LPM.BP2.Coffee"  , "LPM.BP2.Soda",  "LPM.BP2.CNoodles" ,
+                          "LPM.BP2.VOil"   ,  "LPM.BP2.Alcohol" ,   "LPM.BP2.BCereal"  )]
+
+boots.Cross <- boots[,c("Cross.Partial.Chicken", "Cross.Partial.BeefPork", "Cross.Partial.Eggs" ,  "Cross.Partial.Milk" ,
+                          "Cross.Partial.Fish" ,  "Cross.Partial.Tuna" , "Cross.Partial.Lard"  , 
+                          # VegFruits  
+                          "Cross.Partial.Onion", "Cross.Partial.Lime", "Cross.Partial.Apple" ,"Cross.Partial.Orange"  ,
+                          "Cross.Partial.Potato" , "Cross.Partial.Banana", "Cross.Partial.Greens" , "Cross.Partial.Carrots" ,
+                          "Cross.Partial.Tomato"  ,
+                          # Grains
+                          "Cross.Partial.Rice"     , "Cross.Partial.Beans"  , "Cross.Partial.Biscuits", "Cross.Partial.CFlour"   ,  
+                          "Cross.Partial.WBread"   ,"Cross.Partial.Pastries", "Cross.Partial.Tortillas","Cross.Partial.WFlour"  ,
+                          # Other
+                          "Cross.Partial.Sugar"  ,  "Cross.Partial.Coffee"  , "Cross.Partial.Soda",  "Cross.Partial.CNoodles" ,
+                          "Cross.Partial.VOil"   ,  "Cross.Partial.Alcohol" ,   "Cross.Partial.BCereal"  )]
 
 
+results.df$lpm.low <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.025))))
+results.df$lpm.high <-c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.975))))
+
+results.df$poi.low <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.025))))
+results.df$poi.high <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.975))))
+
+results.df$sq.low <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(x) quantile(x, 0.025))))
+results.df$sq.high <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(x) quantile(x, 0.975))))
+
+results.df$c.low <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.025))))
+results.df$c.high <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.975))))
+
+results.df
+results.df$Names <- as.character(results.df$Names)
+
+results.df[c(1:7),] <- results.df[c(1, 2, 4, 3, 7, 5, 6),] # reorder to make the graph look nice
+results.df[c(8:16),] <- results.df[c(12, 13, 11, 10, 14, 9, 15, 16, 8),] # reorder to make the graph look nice
+results.df[c(17:24),] <- results.df[c(20, 22, 21, 17, 24, 18, 23, 19),] # reorder to make the graph look nice
+results.df[c(25:31),] <- results.df[c(27, 28, 26, 31, 30, 25, 29),] # reorder to make the graph look nice
+
+panel_1 <- ggplot(data = results.df) + geom_point(mapping = aes(x = Names, y = LPM)) + 
+  geom_errorbar(mapping = aes(x = Names, y = LPM, ymin=lpm.low, ymax=lpm.high)) + 
+  scale_x_discrete(limits = results.df$Names,
+                   labels = results.df$Names) +
+    # scale_x_discrete(limits = results.df$Names,
+  #                  labels = c("A1", "A2", "A3", 
+  #                            "A4", "A5", "A6", 
+  #                            "A7", "FV1", "FV2",
+  #                            "FV3", "FV4", "FV5", "FV6", "FV7", 
+  #                            "FV8", "FV9",
+  #                            "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", 
+  #                            "O1", "O2", "O3", "O4", "O5", "O6", "O7")) +
+  geom_hline(yintercept=0, linetype = "dashed") +
+  geom_vline(xintercept=7.5, linetype = "dashed") +
+  geom_vline(xintercept=16.5, linetype = "dashed") +
+  geom_vline(xintercept=24.5, linetype = "dashed") +
+  theme(axis.text.x = element_text(color="navy", 
+                                  size=12, angle=90), 
+        axis.ticks = element_blank()) + 
+  labs(title = "Linear Probability Model Results", 
+       y = "Point Estimate and CI")  
+  
+
+panel_2 <- ggplot(data = results.df) + 
+  geom_point(mapping = aes(x = Names, y = Poi)) + 
+  geom_errorbar(mapping = aes(x = Names, y = Poi, ymin=poi.low, ymax=poi.high)) + 
+  scale_x_discrete(limits = results.df$Names,
+                   labels = results.df$Names) +
+    # scale_x_discrete(limits = results.df$Names,
+  #                  labels = c("A1", "A2", "A3", 
+  #                             "A4", "A5", "A6", 
+  #                             "A7", "FV1", "FV2",
+  #                             "FV3", "FV4", "FV5", "FV6", "FV7", 
+  #                             "FV8", "FV9",
+  #                             "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", 
+  #                             "O1", "O2", "O3", "O4", "O5", "O6", "O7")) +
+  geom_hline(yintercept=0, linetype = "dashed") +
+  geom_vline(xintercept=7.5, linetype = "dashed") +
+  geom_vline(xintercept=16.5, linetype = "dashed") +
+  geom_vline(xintercept=24.5, linetype = "dashed") +
+  theme(axis.text.x = element_text(color="navy", 
+                                   size=12, angle=90), 
+        axis.ticks = element_blank()) + 
+  labs(title = "Count Data Model Results", 
+       y = "Point Estimate and CI")  
+
+panel_3 <- ggplot(data = results.df) + 
+  geom_point(mapping = aes(x = Names, y = Squared)) + 
+  geom_errorbar(mapping = aes(x = Names, y = Squared, ymin=sq.low, ymax=sq.high)) + 
+  scale_x_discrete(limits = results.df$Names,
+                   labels = results.df$Names) +
+  # scale_x_discrete(limits = results.df$Names,
+  #                  labels = c("A1", "A2", "A3", 
+  #                             "A4", "A5", "A6", 
+  #                             "A7", "FV1", "FV2",
+  #                             "FV3", "FV4", "FV5", "FV6", "FV7", 
+  #                             "FV8", "FV9",
+  #                             "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", 
+  #                             "O1", "O2", "O3", "O4", "O5", "O6", "O7")) +
+  geom_hline(yintercept=0, linetype = "dashed") +
+  geom_vline(xintercept=7.5, linetype = "dashed") +
+  geom_vline(xintercept=16.5, linetype = "dashed") +
+  geom_vline(xintercept=24.5, linetype = "dashed") +
+  theme(axis.text.x = element_text(color="navy", 
+                                   size=12, angle=90), 
+        axis.ticks = element_blank()) + 
+  labs(title = "Count Data Model Results", 
+       y = "Point Estimate and CI")  
 
 
+panel_4 <- ggplot(data = results.df) + geom_point(mapping = aes(x = Names, y = Cross)) + 
+  geom_errorbar(mapping = aes(x = Names, y = Cross, ymin=c.low, ymax=c.high)) + 
+  scale_x_discrete(limits = results.df$Names,
+                   labels = results.df$Names) +
+  geom_hline(yintercept=0, linetype = "dashed") +
+  geom_vline(xintercept=7.5, linetype = "dashed") +
+  geom_vline(xintercept=16.5, linetype = "dashed") +
+  geom_vline(xintercept=24.5, linetype = "dashed") +
+  theme(axis.text.x = element_text(color="navy", 
+                                   size=12, angle=90), 
+        axis.ticks = element_blank()) + 
+  labs(title = "Cross Partials", 
+       y = "Point Estimate and CI")  
 
+panel_4
+
+cowplot::plot_grid(panel_1, panel_2, panel_4 ,labels = c("A", "C", "D"))
+
+cowplot::plot_grid(panel_1, panel_2, panel_3, panel_4 ,labels = c("A", "B", "C", "D"))
+
+
+# Check that the right confidence intervals are paired with the right foods. 
+colnames(select(boots, starts_with("LPM")))
+colnames(select(boots, starts_with("Poisson")))
+
+
+         
 # Chapter 9: Market Earnings Breakdown Table ####
 
 # Step 0: Verify that the primary employment and the other income source variables are the same 

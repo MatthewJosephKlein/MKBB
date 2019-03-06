@@ -427,7 +427,7 @@ LPM_ME_Fun_misc <- function(food_name){
   # print(i)
   p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
-               veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + breakfast.cereal.price_hybrid + 
+               veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
@@ -444,7 +444,7 @@ Poisson_ME_Fun_misc <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
   p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
                    sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
-                   veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + breakfast.cereal.price_hybrid + 
+                   veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
                    rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
                  cluster = folio,
                  data = final.df.subset, family = poisson)
@@ -461,7 +461,7 @@ Poisson_ME_Fun_misc <- function(food_name){
                                                                               as.matrix(model.mat[,
                                                                                                   c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wavenumber",   
                                                                                                     "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
-                                                                                                    "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , "breakfast.cereal.price_hybrid" , 
+                                                                                                    "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , # "breakfast.cereal.price_hybrid" , 
                                                                                                     "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid" )]) %*% 
                                                                               as.numeric(p1$coefficients)), na.rm = T)
   
@@ -612,7 +612,7 @@ while(j <= 500) { #generating the bootstrap
   
   DiD_reg_summary <- summary(lm(BP ~ treatment_household + wavenumber + I(treatment_household*wavenumber), data = subset(final.df, final.df$wavenumber < 3)))
   
-  boot_t[j] = (DiD[j] - 0.240468)/sqrt(DiD_reg_summary$cov.unscaled[4,4]) 
+  boot_t[j] = (DiD[j] - 0.240468)/DiD_reg_summary$coefficients[4,2] 
   
   keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & 
                                  is.na(BP) == FALSE })# & 
