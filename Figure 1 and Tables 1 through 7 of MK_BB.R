@@ -453,8 +453,8 @@ Poisson_ME_Fun_misc <- function(food_name){
   p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids +  wave2 + wave3 + 
                    sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
                    veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
-                   rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid 
-                 cluster = factor(folio),
+                   rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
+                 cluster = folio,
                  data = final.df.subset, family = poisson)
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
@@ -466,12 +466,12 @@ Poisson_ME_Fun_misc <- function(food_name){
                                         "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
   
   ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
-                                                                              as.matrix(model.mat[,
-                                                                                                  c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
-                                                                                                    "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
-                                                                                                    "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , # "breakfast.cereal.price_hybrid" , 
-                                                                                                    "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid" )]) %*% 
-                                                                              as.numeric(p1$coefficients)), na.rm = T)
+      as.matrix(model.mat[,
+                          c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
+                            "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
+                            "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , # "breakfast.cereal.price_hybrid" , 
+                            "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid" )]) %*% 
+      as.numeric(p1$coefficients)), na.rm = T)
   
   Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
   
@@ -818,9 +818,9 @@ hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0],
      breaks = 100, xlim = c(0.15,0.65), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
 
-# Chapter 6: Generating the Chicken Table ####
+# Chapter 6: Generating the Chicken + Milk Table ####
 
-summary(chick_LPM <- felm(pollo ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+p1 <- summary(chick_LPM <- felm(pollo ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                             chicken.price_hybrid +
                             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
                             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
@@ -829,7 +829,7 @@ summary(chick_LPM <- felm(pollo ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_you
                           | folio + wavenumber | 0 | loc_id,
            data = final.df))
 
-summary(milk_LPM <- felm(leche ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+p2 <- summary(milk_LPM <- felm(leche ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
                             chicken.price_hybrid +
                             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
                             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
@@ -847,7 +847,8 @@ summary(chick_Poisson <- glmmboot(final.df.subset[,"pollo"] ~ BP + I(BP^2) + hh_
                                     chicken.price_hybrid +
                                     lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
                                     beef.price_hybrid + pork.price_hybrid +   
-                                    milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid + factor(wavenumber), 
+                                    milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid +
+                                    factor(wavenumber), 
                cluster = factor(folio),
                data = final.df.subset, family = poisson))
 
@@ -856,22 +857,35 @@ summary(milk_Poisson <- glmmboot(final.df.subset[,"leche"] ~ BP + I(BP^2) + hh_l
                                     chicken.price_hybrid +
                                     lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
                                     beef.price_hybrid + pork.price_hybrid +   
-                                    milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid  +  factor(wavenumber), 
+                                    milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid  + 
+                                   factor(wavenumber), 
                                   cluster = folio,
                                   data = final.df.subset, family = poisson))
 
 # Should I use gather to make a single matrix with the coefs and se's from all four regressions? 
 
-coefs.df <- as.tibble(cbind())
+coefs.df <- tibble(Names = c("$hat{mu}$", "$hat{mu}^{2}$", "HH Log Earnings",
+                                "Num Kids", "Num Young Kids", "Chicken Price", 
+                                "Beef Price", "Pork Price", "Lard Price", "Sardine Price", "Tuna Price", 
+                                "Milk Price", "Egg Price", "Bean Price", "Rice Price"),
+                      Chicken.LPM = as.numeric(unname(chick_LPM$coefficients)[1:15,1]),
+                      Milk.LPM = as.numeric(unname(milk_LPM$coefficients)[1:15,1]),
+                      Chicken.Poi = as.numeric(chick_Poisson$coefficients[1:15]),
+                      Milk.Poi = as.numeric(milk_Poisson$coefficients[1:15]))
 
+se.df <- tibble(Names = paste0( c("$hat{mu}$", "$hat{mu}^{2}$", "HH Log Earnings",
+                                  "Num Kids", "Num Young Kids", "Chicken Price", 
+                                  "Beef Price", "Pork Price", "Lard Price", "Sardine Price", "Tuna Price", 
+                                  "Milk Price", "Egg Price", "Bean Price", "Rice Price"), "_se"), 
+                Chicken.LPM = unname(p1$coefficients[1:15,2]),
+                Milk.LPM = unname(p2$coefficients[1:15,2]),
+                Chicken.Poi = unname(chick_Poisson$sd[1:15]),
+                Milk.Poi = unname(milk_Poisson$sd[1:15]))
 
-#summary(milk_Poisson <- glmmboot(final.df[,"leche"] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + wavenumber +
-#                                    chicken.price_hybrid +
-#                                   lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
-#                                    beef.price_hybrid + pork.price_hybrid +   
-#                                    milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid, 
-#                                  cluster = folio,
-#                                  data = final.df, family = poisson))
+table_6 <- bind_rows(coefs.df, se.df)
+table_6[,2:5] <- round(table_6[,2:5], 3) 
+
+stargazer::stargazer(table_6, summary = FALSE, digits = 3)
 
 stargazer::stargazer(chick_LPM, milk_LPM, chick_LPM, milk_LPM, single.row=F, 
                      covariate.labels = c("$hat{mu}$", "$hat{mu}^{2}$", "HH Log Earnings",

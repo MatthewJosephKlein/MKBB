@@ -541,7 +541,7 @@ mean_BP_97 <- mean_BP_99 <- mean_BP_00  <- boot_t <- DiD  <- c(rep(NA, B))
 
 j = 1
  
-while(j <= 500) { #generating the bootstrap
+while(j <= B) { #generating the bootstrap
   time <- proc.time()
   sample.analog <- sample.analog.Fun()  
   
@@ -1101,7 +1101,7 @@ boot <- as.data.frame(cbind(mean_BP_97, mean_BP_99, mean_BP_00, boot_t,  DiD, # 
                               LPM.BP2.VOil    , LPM.BP2.Alcohol ,
                               LPM.BP2.BCereal ,  LPM.BP2.Pastries))
 
-write.csv(boot, file = "Bootstrap_Results_03_05_19.csv")
+write.csv(boot, file = "Bootstrap_Results_03_07_19.csv")
 
 # Generating the Efron Intervals ####
 
