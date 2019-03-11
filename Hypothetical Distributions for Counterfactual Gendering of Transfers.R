@@ -1,17 +1,14 @@
-# HYPOTHETICAL DISTRIBUTIONS
-
-
+setwd("C:/Users/mjklein2/Desktop/toot/Programming_Directory")
 rm(list=ls())
 library("sampleSelection")
 library("lfe")
 library("glmmML")
 library("tidyverse")
-getwd()
+library("ihs")
 
-# Chapter 1: Functions ####
+load("hh.df.Rda") # From "Final Cleaning for Master Panel Construction.R"
 
-load("hh.df.Rda") # This data.frame is generated in "Final Cleaning for Master Panel Construction.R"
-
+# Treatment households are those who received progresa in wave 2. (1999)
 temp.df <- aggregate(hh.df$progresa_income_total[hh.df$wavenumber==2], 
                      by =list(hh.df$folio[hh.df$wavenumber==2]), FUN=mean, na.rm=T)
 colnames(temp.df) <- c("folio", "progresa_income_total_in_period_2")
@@ -19,7 +16,39 @@ temp.df$treatment_household <- rep(0)
 temp.df$treatment_household[temp.df$progresa_income_total_in_period_2>0] <- 1
 summary(temp.df)
 
-hh.df <- merge(hh.df, temp.df, by = c("folio"))
+hh.df <- merge(hh.df, temp.df, by = "folio")
+table(hh.df$treatment_household, hh.df$wavenumber) #  Need to have a var that delineates the T hh's in waves 1 and 2 for the DiD calc
+hh.df$treatment_household_0 <- ifelse(hh.df$wavenumber > 1, hh.df$treatment_household, 0)
+
+# Then, all eligible HH's we're folded into the program in wave 3 (2000) 
+hh.df$receive_progresa <- ifelse(hh.df$progresa_income_total > 0, 1, 0)
+
+# Drop the HH's where one partner is eligible to have their POO estimated, but the other
+hh.df$drop_dummy <- 0
+hh.df$drop_dummy[hh.df$head_dummy == 1 & hh.df$age < 15 ] <- 1
+hh.df$drop_dummy[hh.df$head_dummy == 1 & hh.df$age > 65 ] <- 1
+
+temp.df <- aggregate(hh.df$drop_dummy, by = list(hh.df$folio), FUN = sum, na.rm=T)
+colnames(temp.df) <- c("folio", "drop_dummy_hh")
+
+hh.df <- left_join(temp.df, hh.df)
+
+# Also drop HH's where the partner is absent for one of the waves (cause's 1's and 0's in the BP measure)
+temp.df <- aggregate(hh.df$head_dummy, by = list(hh.df$folio), FUN = sum, na.rm = T)
+#summary(temp.df)
+colnames(temp.df) <- c("folio", "head_dummy_aggregate")
+temp.df$drop_dummy_hh_2 <- ifelse(temp.df$head_dummy_aggregate == 5, 1, 0) 
+
+hh.df <- left_join(hh.df, select(temp.df, folio, drop_dummy_hh_2))
+
+hh.df <- hh.df %>% filter(drop_dummy_hh == 0)
+hh.df <- hh.df %>% filter(drop_dummy_hh_2 == 0)
+
+# hh.df <- hh.df %>% filter(age < 90)
+
+hh.df$prop_usa_migrant_dummy <- ifelse(hh.df$prop_usa_migrant > 0 & !is.na(hh.df$prop_usa_migrant), 1, 0)
+hh.df$prop_mex_migrant_dummy <- ifelse(hh.df$prop_mex_migrant > 0 & !is.na(hh.df$prop_mex_migrant), 1, 0)
+hh.df$otherincomeval_dummy <- ifelse(hh.df$otherincomeval > 0, 1, 0)
 
 # Editing the Transfer variables to reflect different counterfacutals: 
 # One where men received the transfer and 
@@ -41,58 +70,116 @@ hh.df$Hypothetical_T_Dad_2 <- hh.df$T_dad_total + (hh.df$progresa_income_total/2
 
 # (A.1) Shadow Earnings (SE) Function 
 SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
-  data.df <- subset(sample.analog,  sample.analog$age > 15 & sample.analog$sex == gender_number &  sample.analog$age <= 70)
   
-  selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-    number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-    as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
-    ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
-    proportion_need_permission + proportion_need_accompany  
+  data.df <- subset(sample.analog,  
+                    sample.analog$sex == gender_number &
+                      sample.analog$age > 15 &
+                      sample.analog$age <= 65 &
+                      sample.analog$hh_kids <= 5 & 
+                      sample.analog$hh_young_kids <= 4 & 
+                      sample.analog$num_m_adults <= 5 &
+                      sample.analog$num_f_adults <= 5 & 
+                      sample.analog$hh_young_kids <= quantile(sample.analog$hh_young_kids, 0.95))
   
-  outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-    number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy    
+  
+  data.df$drop <- ifelse(!is.na(data.df$log_wages) & 
+                           data.df$log_wages >=  quantile(data.df$log_wages,
+                                                          c(0.99),
+                                                          na.rm=T),
+                         1, 0)
+  
+  
+  data.df$drop <- ifelse(!is.na(data.df$log_wages) & 
+                           data.df$log_wages <=  quantile(data.df$log_wages,
+                                                          c(0.01),
+                                                          na.rm=T),
+                         1, data.df$drop)
+  
+  
+  
+  data.df <- data.df %>% filter(drop == 0)
+  
+  
+  
+  if(gender_number == 0){   
+    
+    reg <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+                       hh_young_kids + edu_yrs + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+                       number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                       I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                       I(num_f_adults*prop_usa_migrant) +    
+                       as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+                       (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
+                     outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+                       hh_young_kids + edu_yrs  + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
+                       number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                       I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                       I(num_f_adults*prop_usa_migrant) +    
+                       as.factor(year_wave_FE) + receive_progresa,
+                     data = data.df,
+                     method = "ml")
+    
+  }
   
   if(gender_number == 1){  
+    # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
     
-    selection_formula <- LFP ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) + I(num_f_adults*prop_usa_migrant) +  
-      as.factor(year_wave_FE) + treatment_dummy  +  # FE and Exclusion Restrictions
-      ER + ER*number_female_kids +  ER*number_male_kids + ER*num_f_adults + ER*num_m_adults +
-      proportion_need_permission + proportion_need_accompany + progresa_income_mom
+    reg <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+                       hh_young_kids + edu_yrs  + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+                       number_female_kids + number_male_kids  + 
+                       prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                       I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
+                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                       I(num_f_adults*prop_usa_migrant) +
+                       as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+                       (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
+                       asinh(progresa_income_mom), 
+                     # 
+                     outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+                       hh_young_kids + edu_yrs  + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+                       number_female_kids + number_male_kids  +
+                       prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                       I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
+                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                       I(num_f_adults*prop_usa_migrant) +
+                       as.factor(year_wave_FE) + receive_progresa  +  
+                       asinh(progresa_income_mom),
+                     data = data.df,
+                     method = "ml")  
     
-    outcome_formula <-  log_wages ~ age + I(age^2) +  otherincomeval + hh_kids +  hh_young_kids + edu_yrs + literate + gov_transfer +
-      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + pobextre +  mpcalif  +
-      number_female_kids + number_male_kids  + prop_mex_migrant + prop_usa_migrant + I(num_m_adults*prop_mex_migrant) +
-      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-      I(num_f_adults*prop_usa_migrant) +  as.factor(year_wave_FE) + treatment_dummy  +  progresa_income_mom    # Only difference between men and women is the addition of Progresa income for female HH heads that got the transfer
+    summary(exp(predict(reg, newdata = data.df, type = "conditional")))
+    
     
   }
   
-  reg <- selection(selection_formula, outcome_formula, data = data.df, method = "ml")
-  summary(reg)
-  # stargazer::stargazer(reg$probit, reg1$probit, omit = c("year_wave_FE"), single.row = T)
-  # Have to generate the fitted values by hand since the canned packages aren't calculating the values for NA's.
+  # Add the predicted values to data.df, conditional on LFP
+  data.df <- cbind(data.df,
+                   exp(predict(reg, newdata = data.df, type = "conditional"))
+  )
   
-  coefs <- matrix(as.numeric(reg$estimate[55:length(reg$estimate)-2]), ncol = 1)
   
-  if(gender_number==1){
-    coefs <- matrix(as.numeric(reg$estimate[56:length(reg$estimate)-2]), ncol = 1)
-  }
+  # Predict.selection returns two values per observation, E[y|LFP=1] and E[y|LFP=0]. These have slightly different lambda expressions since the conditions are different.
+  # E[y|LFP] = Xbeta + sigma rho lambda(alpha_u) 
+  # where lambda(alpha_u) = phi(alpha_u) / Phi(alpha_u) for LFP = 1
+  # and lambda(alpha_u) = - phi(alpha_u) / (1- Phi(alpha_u)) for LFP = 0. 
+  # See Greene Chapter 24.5, Theorems 24.2 and 24.5, and the derivation in section 24.5.4. 
   
-  X <- model.matrix(outcome_formula, model.frame(outcome_formula, data.df, na.action = na.pass)) # Thanks, Travis, for the idea
+  # Select the correct prediction based on LFP: 
+  data.df$y_hat <- ifelse(data.df$LFP == 1, data.df$"E[yo|ys=1]", data.df$"E[yo|ys=0]")
   
-  y_hat <- exp(X%*%coefs)
-  y_hat.df <- as.data.frame(cbind(data.df$folio, data.df$ind_ID, data.df$wavenumber, y_hat))
+  # y_hat <- exp(predict(reg, newdata = data.df)) # newdata means that it takes a dataframe 
+  y_hat.df <- select(data.df, folio, ind_ID, wavenumber, y_hat)
   return(y_hat.df)
 }
 
-# (A.2) BP Function 
+
+#(A.2) BP Function 
 BP.Fun <- function(){ #Calls shadow wage function
   
   #Step 1: Call the SW function
@@ -131,19 +218,19 @@ BP.Fun <- function(){ #Calls shadow wage function
   
   sample.analog$Hyp_BP[sample.analog$wavenumber == 2] <- 
     (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
-       sample.analog$Hypothetical_T_Mom_2[sample.analog$wavenumber == 2])  /
+       sample.analog$Hypothetical_T_Mom_1[sample.analog$wavenumber == 2])  /
     (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] +
-       sample.analog$Hypothetical_T_Mom_2[sample.analog$wavenumber == 2] + 
+       sample.analog$Hypothetical_T_Mom_1[sample.analog$wavenumber == 2] + 
        sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
-       sample.analog$Hypothetical_T_Dad_2[sample.analog$wavenumber == 2])
+       sample.analog$Hypothetical_T_Dad_1[sample.analog$wavenumber == 2])
   
   sample.analog$Hyp_BP[sample.analog$wavenumber == 3] <- 
     (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] + 
-       sample.analog$Hypothetical_T_Mom_2[sample.analog$wavenumber == 3])  /
+       sample.analog$Hypothetical_T_Mom_1[sample.analog$wavenumber == 3])  /
     (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] +
-       sample.analog$Hypothetical_T_Mom_2[sample.analog$wavenumber == 3] + 
+       sample.analog$Hypothetical_T_Mom_1[sample.analog$wavenumber == 3] + 
        sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
-       sample.analog$Hypothetical_T_Dad_2[sample.analog$wavenumber == 3])
+       sample.analog$Hypothetical_T_Dad_1[sample.analog$wavenumber == 3])
   
   
   return(list(sample.analog, 
@@ -214,23 +301,25 @@ par(mfrow=c(3,1))
 #hist(final.df$BP[final.df$wavenumber == 1], col = rgb(1,1,1), main = "1997", xlab = "Bargaining Power", 
 #     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
 
-hist(final.df$Hyp_BP[final.df$wavenumber == 1 & final.df$treatment_household == 0], main = NA, sub = "1997", col = rgb(1,1,1,0.25, 0.25), xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+hist(final.df$Hyp_BP[final.df$wavenumber == 1 & final.df$treatment_household == 0],
+     main = NA, sub = "1997", col = rgb(1,1,1,0.25, 0.25), xlab = "Bargaining Power", 
+     breaks = 100, xlim = c(0.15,0.65), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
-hist(final.df$Hyp_BP[final.df$wavenumber == 1 & final.df$treatment_household == 1], col = rgb(0,0,0,0.25, 0.25),  
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+hist(final.df$Hyp_BP[final.df$wavenumber == 1 & final.df$treatment_household == 1], 
+     col = rgb(0,0,0,0.25, 0.25),  
+     breaks = 100, xlim = c(0.15,0.65), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
-title(main = "Hypothetical Distributions when Transfers are Split")
+title(main = "Hypothetical Distributions when Transfers are to Men")
 legend("topright", legend = c("control (white)", "treatment (grey)"), col = c("black", "black"), pch = c(0,15))
 
 hist(final.df$Hyp_BP[final.df$wavenumber == 2 & final.df$progresa_income_total == 0], col = rgb(1,1,1,0.25, 0.25), main = "1999", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+     breaks = 100, xlim = c(0.15,0.65), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
 hist(final.df$Hyp_BP[final.df$wavenumber == 2 & final.df$progresa_income_total > 0], col = rgb(0,0,0,0.25, 0.25), 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+     breaks = 100, xlim = c(0.15,0.65), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
 hist(final.df$Hyp_BP[final.df$wavenumber == 3 & final.df$progresa_income_total == 0], col = rgb(1,1,1, 0.25, 0.25), main = "2000", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
+     breaks = 100, xlim = c(0.15,0.65), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
 hist(final.df$Hyp_BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0], col = rgb(0,0,0, 0.25, 0.25), 
-     breaks = 100, xlim = c(0.15,0.5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+     breaks = 100, xlim = c(0.15,0.65), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)

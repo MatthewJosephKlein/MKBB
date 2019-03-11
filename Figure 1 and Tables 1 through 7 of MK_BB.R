@@ -2082,17 +2082,12 @@ levels(results.df$Significant.Poi) <- c("No", "Yes")
 results.df$LPM <- round(results.df$LPM, 3)
 results.df$Poi <- round(results.df$Poi, 3)
 
-
 results.df <- results.df[c(31:25, 24:17, 16:8, 7:1),]
 
 stargazer::stargazer(select(results.df, Names, LPM, LPM.CI, Poi, Poisson.CI), 
                      summary = FALSE, 
                      title = "Hypothesis 2 Results, The Marginal Effects of Power on Diet")
 
-
-
-results.df.temp <- results.df %>% 
-  mutate(LPM = ifelse(Significant.LPM == "Yes", paste0(results.df$LPM, "^{**}"), LPM))
 
 
 
