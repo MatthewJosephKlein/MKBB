@@ -630,38 +630,163 @@ prop.table(table(hh.df$seven_states[ hh.df$wavenumber==3]))
 # Now input that information by hand to generate Table 1: Summary Statistics. 
 
 # Chapter 3: Summary Stats for Diet #####
+library(stargazer)
 
-food_var_names <- c('tomate.rojo', 'cebolla', 'papa', 'zanahorias', 'verdudas.de.hoja', 'narajas', 'platanos', 
+food_var_names <- c('tomate.rojo', 'cebolla', 'papa', 'zanahorias', 'verdudas.de.hoja', 'narajas', 'platanos',
                     'manzanas', 'limones',
-                    'tortialls.de.maiz', 'maiz.en.grano', 'pan.blanco', 
-                    'pan.de.dulce', 'pan.de.caja', 
+                    'tortialls.de.maiz', 'maiz.en.grano', 'pan.blanco',
+                    'pan.de.dulce',
+                    #' 'pan.de.caja',
                     'harina.de.trigo', 'sopa.de.pasta', 'arroz', 'galletas', 'frijol', 
                     'cereales.de.caja',
-                    'pollo', 'carne.de.res.o.puerco', 'carne.de.cabra.u.oveja', 'pescados.y.mariscos', 
+                    'pollo', 'carne.de.res.o.puerco', 'pescados.y.mariscos', 
                     'sardinas.o.atun.en.lata', 
                     'huevos', 'leche', 'manteca.de.cerdo', 'pastelillos.en.bolsa', 'refrescos', 
                     'bebidas.alcoholicas', 'cafe', 'azucar', 'aciete.vegetal')
 
 food_var_names_num <- paste0(food_var_names, "_num_times_consume", sep="")
 
+means_97 <- map_dbl(.x = final.df[,food_var_names][final.df$wavenumber == 1,],
+                    .f = function(x){100*round(mean(x, na.rm=T), 3)})
 
-stargazer(hh.df[,food_var_names][hh.df$wavenumber == 1,],
-          nobs = FALSE, min.max = FALSE)
+means_99_t <- map_dbl(.x = final.df[,food_var_names][final.df$wavenumber == 2 & final.df$treatment_household == 1,],
+                  .f = function(x){100*round(mean(x, na.rm=T), 3)})
 
-stargazer(hh.df[,food_var_names][hh.df$treatment_household == 1 & hh.df$wavenumber == 2,],
-          hh.df[,food_var_names][hh.df$treatment_household == 0 & hh.df$wavenumber == 2,],
-          nobs = FALSE, min.max = FALSE)
+means_99_c <- map_dbl(.x = final.df[,food_var_names][final.df$wavenumber == 2 & final.df$treatment_household == 0,],
+                  .f = function(x){100*round(mean(x, na.rm=T), 3)})
 
-stargazer(hh.df[,food_var_names][hh.df$wavenumber == 3,],
-          nobs = FALSE, min.max = FALSE)
+means_99_c <- map_dbl(.x = final.df[,food_var_names][final.df$wavenumber == 2 & final.df$treatment_household == 0,],
+                  .f = function(x){100*round(mean(x, na.rm=T), 3)})
 
-stargazer(hh.df[,food_var_names_num][hh.df$wavenumber == 1,],
-          hh.df[,food_var_names_num][hh.df$wavenumber == 2 & hh.df$treatment_household == 0,],
-          hh.df[,food_var_names_num][hh.df$wavenumber == 2 & hh.df$treatment_household == 1,],
-          hh.df[,food_var_names_num][hh.df$wavenumber == 3,],
-          nobs = FALSE, min.max = FALSE)
+means_00 <- map_dbl(.x = final.df[,food_var_names][final.df$wavenumber == 3,],
+                .f = function(x){100*round(mean(x, na.rm=T), 3)}) 
 
-# Put it together by hand. 
+means_97_p <- map_dbl(.x = final.df[,food_var_names_num][final.df$wavenumber == 1,],
+                      .f = function(x){round(mean(x, na.rm=T), 2)})
+means_99_t_p <- map_dbl(.x = final.df[,food_var_names_num][final.df$wavenumber == 2 & 
+                                                             final.df$treatment_household == 1,],
+                  .f = function(x){round(mean(x, na.rm=T), 2)})
+means_99_c_p <- map_dbl(.x = final.df[,food_var_names_num][final.df$wavenumber == 2 & 
+                                                             final.df$treatment_household == 0,],
+                  .f = function(x){round(mean(x, na.rm=T), 2)})
+means_99_c_p <- map_dbl(.x = final.df[,food_var_names_num][final.df$wavenumber == 2 & 
+                                                             final.df$treatment_household == 0,],
+                  .f = function(x){round(mean(x, na.rm=T), 2)})
+means_00_p <- map_dbl(.x = final.df[,food_var_names_num][final.df$wavenumber == 3,],
+                .f = function(x){round(mean(x, na.rm=T), 2)}) 
+
+significant.difference <- c(unname(t.test(# Chicken
+  x = final.df[,food_var_names[1]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[1]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Beef Pork
+  x = final.df[,food_var_names[2]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[2]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Eggs
+  x = final.df[,food_var_names[3]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[3]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Milk
+  x = final.df[,food_var_names[4]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[4]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Potatoes
+  x = final.df[,food_var_names[5]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[5]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[6]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[6]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[7]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[7]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[8]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[8]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[9]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[9]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[10]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[10]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[11]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[11]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[12]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[12]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[13]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[13]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[14]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[14]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[15]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[15]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[16]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[16]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[17]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[17]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[18]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[18]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[19]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[19]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[20]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[20]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[21]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[21]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[22]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[22]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[23]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[23]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[24]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[24]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[25]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[25]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicke
+  x = final.df[,food_var_names[26]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[26]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[27]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[27]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[28]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[28]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[29]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[29]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[30]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[30]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[31]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[31]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat), 
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[32]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[32]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat))
+
+sig.diffs <-
+  tibble('Names' = food_var_names, 
+         't' = significant.difference,
+       'Sig' = (abs(significant.difference) > 1.96))
+
+means.df <- tibble('Names' = food_var_names, # Translate the spanish to english in the document. 
+                   '1997' = paste0(means_97, " (", means_97_p, ")"), 
+                   '1999 Control' = paste0(means_99_c, " (", means_99_c_p, ")"),
+                   '1999 Treatment' = paste0(means_99_t, " (", means_99_t_p, ")"),
+                   '2000' = paste0(means_00, " (", means_00_p, ")"))
+means.df
+
+stargazer(means.df, summary = FALSE, title = "Percent of Households Consuming Each Food (with Mean Days/Week Frequency)")
+
+
 
 # Chapter 4: Generating Tables 4 and 5, the predicted earnings tables ####
 
@@ -715,7 +840,6 @@ men.reg <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + 
                      as.factor(year_wave_FE) + receive_progresa,
                    data = men.sub,
                    method = "ml")
-  
 
 women.reg <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
                      hh_young_kids + edu_yrs  + literate + gov_transfer +
@@ -743,10 +867,42 @@ women.reg <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy 
                    method = "ml")  
   
 
-stargazer::stargazer(women.reg, men.reg, omit = c("year_wave_FE"), single.row = T)
+stargazer::stargazer(women.reg, men.reg, omit = c("year_wave_FE"), single.row = T,
+                     covariate.labels = c("Age"  , "Age Squared" , "Other Income Dummy", "Asihn of Other Income" , "Number of Kids", 
+                                          "Number of Kids Ages", "Education" , "Literate Dummy",  "Other Gov Transfer Dummy",
+                                          "Indigenous Language Dummy" , "Spanish and Ind. Lang. Dummy", "Household Head Dummy" ,
+                                          "Number Female Adults" , "Number Male Adults" , "Gov. Poverty Index" , "Gov. Poverty Dummy", 
+                                          "Number Female Kids", "Number Male Kids" , "Prop. Village Migrates MEX"  ,
+                                          "Prop. Village Migrates USA" , "Num Male Adults * Prop. MEX Mig",
+                                        "Num Male Adults *  Prop. USA Mig",
+                                        "Num Female Adults *  Prop. MEX Mig",
+                                        "Num Male Adults * Prop. USA Mig",
+                                        "Progresa Control Group Dummy" ,  "Female HH Head's Progresa Income"))
 
-a <- summary(reg_women)
-b <- summary(reg_men)
+stargazer::stargazer(women.reg, men.reg, selection.equation = TRUE, omit = c("year_wave_FE"), single.row = T, 
+                     covariate.labels =
+                       c("Age"  , "Age Squared" , "Other Income Dummy", "Asihn of Other Income" , "Number of Kids", 
+                       "Number of Kids Ages", "Education" , "Literate Dummy",  "Other Gov Transfer Dummy",
+                       "Indigenous Language Dummy" , "Spanish and Ind. Lang. Dummy", "Household Head Dummy" ,
+                       "Number Female Adults" , "Number Male Adults" , "Gov. Poverty Index" , "Gov. Poverty Dummy", 
+                       "Number Female Kids", "Number Male Kids" , "Prop. Village Migrates MEX"  ,
+                       "Prop. Village Migrates USA" , "Num Male Adults * Prop. MEX Mig",
+                       "Num Male Adults *  Prop. USA Mig",
+                       "Num Female Adults *  Prop. MEX Mig",
+                       "Num Male Adults * Prop. USA Mig",
+                       "Progresa Control Group Dummy" , "Women's Job View Proportion",
+                       "Need Permission Proportion", "Need Accompaniment Proportion",
+                       "Female HH Head's Progresa Income", 
+                       "ER1 Interaction", "ER2 Interaction", "ER3 Interaction"))
+
+a <- summary(men.reg)
+b <- summary(women.reg)
+
+
+a <- tibble()
+    
+
+
 
 t1 <- xtable::xtable(a$estimate[1:53,],  omit = c("year_wave_FE"), single.row = T)
 t2 <- xtable::xtable(b$estimate[1:52,],  omit = c("year_wave_FE"), single.row = T)
@@ -1088,10 +1244,10 @@ results.df <- as.tibble(results.df)
 results.df
 
 # Chapter 8: Constructing the Results Figures #### 
-boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_04_19.csv")
-boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_05_19.csv")
-boots2 <- boots2[1:500,]
+boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results1000_03_07_19.csv")
+boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_07_19.csv") 
 boots <- bind_rows(boots1, boots2)
+
 
 boots.lpm <- boots[,c("LPM.Marginal.Chicken", "LPM.Marginal.BeefPork", "LPM.Marginal.Eggs" ,  "LPM.Marginal.Milk" ,
                       "LPM.Marginal.Fish" ,  "LPM.Marginal.Tuna" , "LPM.Marginal.Lard"  , 
@@ -1144,6 +1300,18 @@ boots.Cross <- boots[,c("Cross.Partial.Chicken", "Cross.Partial.BeefPork", "Cros
                           # Other
                           "Cross.Partial.Sugar"  ,  "Cross.Partial.Coffee"  , "Cross.Partial.Soda",  "Cross.Partial.CNoodles" ,
                           "Cross.Partial.VOil"   ,  "Cross.Partial.Alcohol" ,   "Cross.Partial.BCereal"  )]
+boots.RHS <- boots[,c("RHS.Chicken", "RHS.BeefPork", "RHS.Eggs" ,  "RHS.Milk" ,
+                        "RHS.Fish" ,  "RHS.Tuna" , "RHS.Lard"  , 
+                        # VegFruits  
+                        "RHS.Onion", "RHS.Lime", "RHS.Apple" ,"RHS.Orange"  ,
+                        "RHS.Potato" , "RHS.Banana", "RHS.Greens" , "RHS.Carrots" ,
+                        "RHS.Tomato"  ,
+                        # Grains
+                        "RHS.Rice"     , "RHS.Beans"  , "RHS.Biscuits", "RHS.CFlour"   ,  
+                        "RHS.WBread"   ,"RHS.Pastries", "RHS.Tortillas","RHS.WFlour"  ,
+                        # Other
+                        "RHS.Sugar"  ,  "RHS.Coffee"  , "RHS.Soda",  "RHS.CNoodles" ,
+                        "RHS.VOil"   ,  "RHS.Alcohol" ,   "RHS.BCereal"  )]
 
 
 results.df$lpm.low <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.025))))
@@ -1158,15 +1326,42 @@ results.df$sq.high <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(
 results.df$c.low <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.025))))
 results.df$c.high <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.975))))
 
+results.df$rhs.low <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.025))))
+results.df$rhs.high <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.975))))
+
+
+results.df <- results.df %>% 
+  mutate(rhs = c(la.chick * DiD, # Animal Products
+                 la.BPork * DiD, la.eggs * DiD, la.milk * DiD, la.fish * DiD, la.tuna * DiD, la.lard * DiD,  
+                 lVF.onion  * DiD, #Veg and Fruits
+                 lVF.limes  * DiD, lVF.apples * DiD,
+                 lVF.orange * DiD, lVF.potato * DiD,
+                 lVF.banana * DiD, lVF.greens * DiD,
+                 lVF.carrot * DiD, lVF.tomato * DiD,
+                 lG.rice      * DiD, lG.beans     * DiD,
+                 lG.biscuits  * DiD, lG.Cflour    * DiD,
+                 lG.Wbread    * DiD, lG.Pastries  * DiD,
+                 lG.Tortillas * DiD, lG.WFlour    * DiD,
+                 lM.sugar  * DiD, lM.coffee * DiD,
+                 lM.soda   * DiD, lM.CupN   * DiD,
+                 lM.VOil   * DiD, lM.Alcohol* DiD,
+                 lM.BCereal* DiD))
+
+
 results.df
 results.df$Names <- as.character(results.df$Names)
+
 
 results.df[c(1:7),] <- results.df[c(1, 2, 4, 3, 7, 5, 6),] # reorder to make the graph look nice
 results.df[c(8:16),] <- results.df[c(12, 13, 11, 10, 14, 9, 15, 16, 8),] # reorder to make the graph look nice
 results.df[c(17:24),] <- results.df[c(20, 22, 21, 17, 24, 18, 23, 19),] # reorder to make the graph look nice
 results.df[c(25:31),] <- results.df[c(27, 28, 26, 31, 30, 25, 29),] # reorder to make the graph look nice
 
-results.df <- results.df[c(25:31, 17:24, 8:16, 7:1),]
+results.df <- results.df[c(31:25, 24:17, 16:8, 7:1),]
+
+library(cowplot)
+library(grid)
+library(gridExtra)
 
 results.df$Significant <- ifelse(results.df$lpm.low > 0, 1, 0)
 results.df$Significant <- factor(ifelse(results.df$lpm.high < 0, 1, 
@@ -1184,7 +1379,7 @@ panel_1 <- ggplot(data = results.df) +
                    labels = results.df$Names) +
   geom_hline(yintercept=0, linetype = "dashed") +
   geom_vline(xintercept=7.5, linetype = "dashed") +
-  geom_vline(xintercept=16.5, linetype = "dashed") +
+  geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
   theme(axis.ticks = element_blank(), 
      # axis.text.y = element_blank(),
@@ -1217,7 +1412,7 @@ panel_2 <- ggplot(data = results.df) +
   #                             "O1", "O2", "O3", "O4", "O5", "O6", "O7")) +
   geom_hline(yintercept=0, linetype = "dashed") +
   geom_vline(xintercept=7.5, linetype = "dashed") +
-  geom_vline(xintercept=16.5, linetype = "dashed") +
+  geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
   theme(axis.text.y = element_blank(), 
         axis.title.y = element_blank(),
@@ -1225,7 +1420,7 @@ panel_2 <- ggplot(data = results.df) +
         axis.ticks = element_blank(), 
         legend.position = "none") + 
   labs(title = "Count Data Model Results", 
-       y = "Point Estimate and CI")  + coord_flip()
+       y = "Point Estimate and CI")  + coord_flip()  
 
 panel_2
 
@@ -1250,7 +1445,7 @@ panel_3 <- ggplot(data = results.df) +
   #                             "O1", "O2", "O3", "O4", "O5", "O6", "O7")) +
   geom_hline(yintercept=0, linetype = "dashed") +
   geom_vline(xintercept=7.5, linetype = "dashed") +
-  geom_vline(xintercept=16.5, linetype = "dashed") +
+  geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
   theme(#axis.text.x = element_text(color="navy", size=12, angle=90), 
         axis.ticks = element_blank(), 
@@ -1276,7 +1471,7 @@ panel_4 <- ggplot(data = results.df) + geom_point(mapping = aes(x = Names, y = C
                    labels = results.df$Names) +
   geom_hline(yintercept=0, linetype = "dashed") +
   geom_vline(xintercept=7.5, linetype = "dashed") +
-  geom_vline(xintercept=16.5, linetype = "dashed") +
+  geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
   theme(axis.text.y = element_blank(), # element_text(color="navy", size=12, angle=90), 
         axis.title.y = element_blank(),
@@ -1294,9 +1489,6 @@ p <- cowplot::plot_grid(panel_1, panel_2, panel_3, panel_4,
                    nrow=1)
 
 #create common x label
-library(cowplot)
-library(grid)
-library(gridExtra)
 x.grob <- textGrob("Point Estimates and Confidence Intervals", 
                    gp=gpar(fontface="bold", col="black", fontsize=15))
 
@@ -1327,7 +1519,162 @@ ggdraw() +
   draw_plot(panel_1)
 
 
-# Chapter 9: Market Earnings Breakdown Table ####
+ggdraw() +
+  draw_image("https://pbs.twimg.com/profile_images/1000060649421004800/ZzEbv1o__400x400.jpg") +
+  draw_plot(panel_1)
+
+# haha
+
+# Chapter 9: Right hand side calculations for equation 5 + Table ####
+
+sig.diffs <-
+  tibble('Names' = food_var_names, 
+         'Sig' = (abs(significant.difference) > 1.96))
+
+sig.diffs <- sig.diffs[sig.diffs$Sig == TRUE,]
+
+food_var_names <- sig.diffs$Names
+  
+means_99_t <- map_dbl(.x = final.df[,food_var_names][final.df$wavenumber == 2 & final.df$treatment_household == 1,],
+                      .f = function(x){100*round(mean(x, na.rm=T), 3)})
+
+means_99_c <- map_dbl(.x = final.df[,food_var_names][final.df$wavenumber == 2 & final.df$treatment_household == 0,],
+                      .f = function(x){100*round(mean(x, na.rm=T), 3)})
+
+diff <- means_99_t - means_99_c
+
+results.explain.df <- tibble(
+  'Names' = food_var_names,
+  '1999 Treatment' = means_99_t,
+  '1999 Control' = means_99_c, 
+  'Difference' = diff,
+  'test' = 
+c(unname(t.test(# Chicken
+            x = final.df[,food_var_names[1]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+            y = final.df[,food_var_names[1]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Beef Pork
+  x = final.df[,food_var_names[2]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[2]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Eggs
+  x = final.df[,food_var_names[3]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[3]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Milk
+  x = final.df[,food_var_names[4]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[4]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Potatoes
+  x = final.df[,food_var_names[5]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[5]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[6]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[6]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[7]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[7]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[8]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[8]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[9]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[9]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[10]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[10]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[11]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[11]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[12]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[12]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[13]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[13]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[14]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[14]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[15]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[15]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[16]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[16]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[17]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[17]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[18]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[18]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[19]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[19]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[20]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[20]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[21]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[21]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat),
+unname(t.test( # Chicken
+  x = final.df[,food_var_names[22]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
+  y = final.df[,food_var_names[22]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat)),
+'RHS' = c(lVF.tomato*DiD*100, 
+          0, # onion
+          lVF.potato*DiD*100,
+          lVF.orange*DiD*100,
+          lVF.banana*DiD*100,
+          lVF.apples*DiD*100,
+          0, # Limes
+          0, # tortilla, 
+          0, #Corn Flour, 
+          lG.Wbread*DiD*100,
+          0, # Pan de Dulce,
+          0, # Wheat Flour, 
+          lM.CupN*DiD*100, 
+          0, #RICE
+          lG.biscuits*DiD*100, 
+          la.chick*DiD*100, # Multiple by 100 so it's in Percent Terms
+          la.BPork *DiD*100,
+          0, # Beef or pork
+          la.eggs*DiD*100,
+          0, # Lard
+          0, #soda
+          0), # coffee
+'% Explained By Power'  = (RHS / Difference)*100)
+
+results.explain.df[,2:7] <- round(results.explain.df[,2:7], 3)
+results.explain.df
+
+stargazer(results.explain.df, summary = FALSE)
+
+# Plots
+
+results.df$Significant <- ifelse(results.df$rhs.low > 0, 1, 0)
+results.df$Significant <- factor(ifelse(results.df$rhs.high < 0, 1, 
+                                        results.df$Significant))
+levels(results.df$Significant) <- c("No", "Yes")
+
+panel_5 <- ggplot(data = results.df) +
+  geom_point(mapping = aes(x = Names, y = rhs)) + 
+  geom_errorbar(mapping = aes(x = Names,
+                              y = rhs,
+                              ymin=rhs.low,
+                              ymax=rhs.high, 
+                              color = Significant)) +
+  scale_x_discrete(limits = results.df$Names,
+                   labels = results.df$Names) +
+  geom_hline(yintercept=0, linetype = "dashed") +
+  geom_vline(xintercept=7.5, linetype = "dashed") +
+  geom_vline(xintercept=15.5, linetype = "dashed") +
+  geom_vline(xintercept=24.5, linetype = "dashed") +
+  theme(axis.ticks = element_blank(), 
+        # axis.text.y = element_blank(),
+        axis.title.y = element_blank(), 
+        axis.title.x = element_blank()) +
+       # legend.position="none") +
+  labs(title = "RHS Estimates", y = " ")  + 
+  coord_flip()
+
+panel_5
+
+# Chapter 10: Market Earnings Breakdown Table ####
 
 # Step 0: Verify that the primary employment and the other income source variables are the same 
 #         across waves
@@ -1710,5 +2057,45 @@ Table_2_non_market_fun <- function(wavenum, type){ # A function to generate summ
 walk(c(1:17), Table_2_non_market_fun, wavenum=1)
 walk(c(1:17), Table_2_non_market_fun, wavenum=2)
 walk(c(1:17), Table_2_non_market_fun, wavenum=3)
+
+
+
+# Chapter 11: Constructing Table 8 - the Point Estimates, Bonferroni Updates, and CIs #####
+
+
+
+results.df
+
+results.df$LPM.CI <- paste0("[", round(results.df$lpm.low,3), ", ", round(results.df$lpm.high, 3), "]")
+results.df$Poisson.CI <- paste0("[", round(results.df$poi.low,3), ", ", round(results.df$poi.high, 3), "]")
+
+results.df$Significant.LPM <- ifelse(results.df$lpm.low > 0, 1, 0)
+results.df$Significant.LPM <- factor(ifelse(results.df$lpm.high < 0, 1, 
+                                        results.df$Significant.LPM))
+levels(results.df$Significant.LPM) <- c("No", "Yes")
+
+results.df$Significant.Poi <- ifelse(results.df$poi.low > 0, 1, 0)
+results.df$Significant.Poi <- factor(ifelse(results.df$poi.high < 0, 1, 
+                                        results.df$Significant.Poi))
+levels(results.df$Significant.Poi) <- c("No", "Yes")
+
+results.df$LPM <- round(results.df$LPM, 3)
+results.df$Poi <- round(results.df$Poi, 3)
+
+
+results.df <- results.df[c(31:25, 24:17, 16:8, 7:1),]
+
+stargazer::stargazer(select(results.df, Names, LPM, LPM.CI, Poi, Poisson.CI), 
+                     summary = FALSE, 
+                     title = "Hypothesis 2 Results, The Marginal Effects of Power on Diet")
+
+
+
+results.df.temp <- results.df %>% 
+  mutate(LPM = ifelse(Significant.LPM == "Yes", paste0(results.df$LPM, "^{**}"), LPM))
+
+
+
+
 
 
