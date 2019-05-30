@@ -287,29 +287,354 @@ final.df <-
                                    "aciete.vegetal", "aciete.vegetal_num_times_consume",
                                    "sopa.de.pasta.price_hybrid", "breakfast.cereal.price_hybrid",
                                    # Treatment Vars
-                                   "treatment_household", "treatment_household_0", "progresa_income_total", 
-                                   "receive_progresa")],
+                                   "treatment_household", "treatment_household_0", "progresa_income_total",
+                               #    "AD_equal_rights", "AD_women_in_home", "AD_obedience",
+                              #     "AD_say_comm", "AD_women_opinions","AD_women_job",
+                                   # "accompanied", 
+                                   "need_permission",
+                                   "receive_progresa", "unique_loc_id", "num_f_adults", "num_m_adults", 
+                              "pobre", "pobextre")],
                    final.df, by =   c("folio", "wavenumber")))
 
 
+# Chapter 2 - loading in the other decision making variables ####
 
+library("foreign")
 
+load("hh.df.Rda") # This data.frame is generated in "Final Cleaning for Master Panel Construction.R"
+hh98.df <- read.spss('socioec_encel_98m.sav', use.value.labels = FALSE, to.data.frame = TRUE)
+hh99m.df <- read.spss('socioec_encel_99m.sav', use.value.labels = FALSE, to.data.frame = TRUE)
+#hh00.df <- read.spss('socioec_encel_2000n.sav', use.value.labels = FALSE, to.data.frame = TRUE)
 
+# In this pipe, we select the columns we want from hh98.df, then we aggregate the information to the HH level 
+# Rename the columns at the same time.
+sub.98 <- hh98.df %>% 
+  select(folio, p05003, p05004, p05005, p05006, p05007, p05008, p05009, 
+         p05010, p127, p128, p129, p130, p131, p132, p133, p13401, p13402, 
+         p13403, p13701, p13702, p13703, p13704, p13705, p13706)  %>%
+  group_by(folio) %>%  # This command aggregates all of the following variables and renames them
+  summarize(DM_who_tells_sick_kid = mean(p127, na.rm=T),
+            DM_tells_kid_school = mean(p128, na.rm=T),
+            DM_spend_women_income = mean(p129, na.rm=T),
+            DM_HH_fix_expenditures = mean(p130, na.rm=T),
+            DM_buy_kids_shoes = mean(p131, na.rm=T),
+            DM_control_small_livestock = mean(p132, na.rm=T),
+            DM_decides_garden = mean(p133, na.rm=T),
+            DM_allowed_visit_parents = mean(p13401, na.rm=T), 
+            DM_allowed_visit_friends = mean(p13401, na.rm=T),
+            DM_not_allowed_visit = mean(p13401, na.rm=T), 
+            PAG_girls_clothing = mean(p05003, na.rm=T),
+            PAG_boys_clothing = mean(p05004, na.rm=T),
+            PAG_womens_clothing = mean(p05005, na.rm=T),
+            PAG_mens_clothing = mean(p05006, na.rm=T),
+            PAG_girls_shoes = mean(p05007, na.rm=T),
+            PAG_boys_shoes = mean(p05008, na.rm=T),
+            PAG_womens_shoes = mean(p05009, na.rm=T),
+            PAG_mens_shoes = mean(p05010, na.rm=T),
+            AD_women_in_home = mean(p13701, na.rm=T), 
+            AD_obedience = mean(p13702, na.rm=T), 
+            AD_say_comm = mean(p13703, na.rm=T),
+            AD_women_job = mean(p13704, na.rm=T), 
+            AD_equal_rights= mean(p13705, na.rm=T), 
+            AD_women_opinions = mean(p13706, na.rm=T))                                     
 
+sub.98$wavenumber <- rep(1)
 
-# edit the variables to be dummies equal to one for agree, 0 for disagree
+#sub.98.land <- hh98.df %>% select()
 
+sub.99 <- hh99m.df %>% 
+  select(folio, m10904, m10905, m11001, m11002, m11003, m11004, m11005, m11006, 
+         m137, m138, m139, m140, m141, m142, m143, m144, m14801, m14802, m14803, 
+         m14804, m14805, m14806)  %>%
+  group_by(folio) %>%  # This command aggregates all of the following variables and renames them
+  summarize(DM_who_tells_sick_kid = mean(m137, na.rm=T),
+            DM_tells_kid_school = mean(m138, na.rm=T),
+            DM_kids_leave_house = mean(m139, na.rm=T),
+            DM_buy_kids_shoes = mean(m140, na.rm=T),
+            DM_buy_food = mean(m141, na.rm=T),
+            DM_HH_fix_expenditures = mean(m142, na.rm=T),
+            DM_HH_durable_purchase = mean(m143, na.rm=T),
+            DM_spend_women_income = mean(m144, na.rm=T), 
+            PAG_girls_clothing = mean(m10904, na.rm=T),
+            PAG_boys_clothing = mean(m10905, na.rm=T),
+            PAG_womens_clothing = mean(m11001, na.rm=T),
+            PAG_mens_clothing = mean(m11002, na.rm=T),
+            PAG_girls_shoes = mean(m11003, na.rm=T),
+            PAG_boys_shoes = mean(m11004, na.rm=T),
+            PAG_womens_shoes = mean(m11005, na.rm=T),
+            PAG_mens_shoes = mean(m11006, na.rm=T), 
+            AD_women_in_home = mean(m14801, na.rm=T), 
+            AD_obedience = mean(m14802, na.rm=T), 
+            AD_say_comm = mean(m14803, na.rm=T),
+            AD_women_job = mean(m14804, na.rm=T), 
+            AD_equal_rights= mean(m14805, na.rm=T), 
+            AD_women_opinions = mean(m14806, na.rm=T))    
+
+sub.99$wavenumber <- rep(2)
+
+sub <- bind_rows(sub.98, sub.99)
+
+final.df <- left_join(final.df, sub, by = c("folio", "wavenumber"))
+
+# Making a total HH size variable
+
+hh.size <- hh.df %>% group_by(wavenumber) %>% count(folio) 
+colnames(hh.size) <- c("wavenumber", "folio", "hh_size")
+
+final.df <- left_join(final.df, hh.size, by = c("folio", "wavenumber"))
+
+# Chapter 3 - Variable Construction and regressions ####
+
+library(dummies)
 final.df$AD_equal_rights[final.df$AD_equal_rights != 1] <- 0
 final.df$AD_women_in_home[final.df$AD_women_in_home != 1] <- 0
 final.df$AD_obedience[final.df$AD_obedience != 1] <- 0
 final.df$AD_say_comm[final.df$AD_say_comm != 1] <- 0
-final.df$AD_women_opinions[final.df$AD_equal_rights != 1] <- 0
+final.df$AD_women_opinions[final.df$AD_women_opinions != 1] <- 0
 final.df$AD_women_job[final.df$AD_women_job != 1] <- 0
 
+final.df$need_permission_dummy <- 0
+final.df$need_permission_dummy[final.df$need_permission == 1] <- 1
 
-summary(felm(BP ~ accompanied + need_permission + AD_women_in_home + AD_obedience + treatment_household +
-             AD_say_comm + AD_women_job +  AD_equal_rights + AD_women_opinions | wavenumber | 0 | loc_id, 
-           data = final.df))
+# Dummify and Generate Summary Stats Table 
+
+# 1
+final.df$DM_HH_fix_expenditures_M <- as.tibble(dummy(final.df$DM_HH_fix_expenditures))[[1]]  
+final.df$DM_HH_fix_expenditures_W <- as.tibble(dummy(final.df$DM_HH_fix_expenditures))[[2]]
+final.df$DM_HH_fix_expenditures_T <- as.tibble(dummy(final.df$DM_HH_fix_expenditures))[[3]]
+# 2
+final.df$DM_tells_kid_school_M <- as.tibble(dummy(final.df$DM_tells_kid_school))[[1]]  
+final.df$DM_tells_kid_school_W <- as.tibble(dummy(final.df$DM_tells_kid_school))[[2]]
+final.df$DM_tells_kid_school_T <- as.tibble(dummy(final.df$DM_tells_kid_school))[[3]]
+# 3
+final.df$DM_spend_women_income_M <- as.tibble(dummy(final.df$DM_spend_women_income))[[1]]  
+final.df$DM_spend_women_income_W <- as.tibble(dummy(final.df$DM_spend_women_income))[[2]]
+final.df$DM_spend_women_income_T <- as.tibble(dummy(final.df$DM_spend_women_income))[[3]]
+# 4
+final.df$DM_who_tells_sick_kid_M <- as.tibble(dummy(final.df$DM_who_tells_sick_kid))[[1]]  
+final.df$DM_who_tells_sick_kid_W <- as.tibble(dummy(final.df$DM_who_tells_sick_kid))[[2]]
+final.df$DM_who_tells_sick_kid_T <- as.tibble(dummy(final.df$DM_who_tells_sick_kid))[[3]]
+# 5  
+final.df$DM_buy_kids_shoes_M <- as.tibble(dummy(final.df$DM_buy_kids_shoes))[[1]]  
+final.df$DM_buy_kids_shoes_W <- as.tibble(dummy(final.df$DM_buy_kids_shoes))[[2]]
+final.df$DM_buy_kids_shoes_T <- as.tibble(dummy(final.df$DM_buy_kids_shoes))[[3]]
+# 6
+final.df$DM_control_small_livestock_M <- as.tibble(dummy(final.df$DM_control_small_livestock))[[1]]  
+final.df$DM_control_small_livestock_W <- as.tibble(dummy(final.df$DM_control_small_livestock))[[2]]
+final.df$DM_control_small_livestock_T <- as.tibble(dummy(final.df$DM_control_small_livestock))[[3]]
+# 7
+final.df$DM_decides_garden_M <- as.tibble(dummy(final.df$DM_decides_garden))[[1]]  
+final.df$DM_decides_garden_W <- as.tibble(dummy(final.df$DM_decides_garden))[[2]]
+final.df$DM_decides_garden_T <- as.tibble(dummy(final.df$DM_decides_garden))[[3]]
+
+final.df$DM_count_W <- rowSums(cbind(final.df$DM_HH_fix_expenditures_W, final.df$DM_tells_kid_school_W, 
+                                     final.df$DM_buy_kids_shoes_W, final.df$DM_control_small_livestock_W,      
+                                     final.df$DM_decides_garden_W, final.df$DM_spend_women_income_W,  
+                                     final.df$DM_who_tells_sick_kid_W), na.rm = T)
+
+final.df$DM_count_T <- rowSums(cbind(final.df$DM_HH_fix_expenditures_T, final.df$DM_tells_kid_school_T, 
+                                     final.df$DM_buy_kids_shoes_T, final.df$DM_control_small_livestock_T,      
+                                     final.df$DM_decides_garden_T, final.df$DM_spend_women_income_T,  
+                                     final.df$DM_who_tells_sick_kid_T), na.rm = T)
+
+final.df$DM_count_M <- rowSums(cbind(final.df$DM_HH_fix_expenditures_M, final.df$DM_tells_kid_school_M, 
+                                     final.df$DM_buy_kids_shoes_M, final.df$DM_control_small_livestock_M,      
+                                     final.df$DM_decides_garden_M, final.df$DM_spend_women_income_M,  
+                                     final.df$DM_who_tells_sick_kid_M), na.rm = T)
+
+summary(reg1 <-  lfe::felm(DM_buy_kids_shoes_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+                       unique_loc_id, data = final.df))
+
+summary(reg2 <-  lfe::felm(DM_tells_kid_school_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+                       unique_loc_id, data = final.df))
+
+summary(reg3 <-  lfe::felm(DM_spend_women_income_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)| unique_loc_id + wavenumber | 0 | 
+                             unique_loc_id, data = final.df))
+
+summary(reg4 <-  lfe::felm(DM_who_tells_sick_kid_T ~BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+                             unique_loc_id, data = final.df))
+
+summary(reg5 <-  lfe::felm(need_permission_dummy ~BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)  | unique_loc_id + wavenumber | 0 | 
+                             unique_loc_id, data = final.df))
+
+summary(reg6 <-  lfe::felm(DM_decides_garden_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+                             unique_loc_id, data = final.df))
+
+
+summary(reg7 <-  lfe::felm(DM_control_small_livestock_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)  | unique_loc_id + wavenumber | 0 | 
+                             unique_loc_id, data = final.df))
+
+summary(reg8 <-  lfe::felm(DM_HH_fix_expenditures_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+                             unique_loc_id, data = final.df))
+
+stargazer::stargazer(reg1, reg2, reg3, reg4, covariate.labels = c("$hat{mu}$", "$hat{mu}^2$", "HH Log Earnings", 
+                                                                  "# Women", "# Men", "HH Size", "# Kids", "# Young Kids",
+                                                                  "Gov. Poverty Dummy", "NA", "Extreme Pov 1", "Extreme Pov 2"), 
+                     title = "Decision Making Patterns and Bargaining Power")
+
+stargazer::stargazer(reg5, reg6, reg7, reg8,  covariate.labels = c("$hat{mu}$", "$hat{mu}^2$", "HH Log Earnings", 
+                                                                   "# Women", "# Men", "HH Size", "# Kids", "# Young Kids",
+                                                                   "Gov. Poverty Dummy", "NA", "Extreme Pov 1", "Extreme Pov 2"), 
+                     title = "Decision Making Patterns and Bargaining Power, Continued")
+
+
+
+summary(reg9 <-  lfe::felm(AD_women_in_home ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults +
+                             hh_size + hh_kids + hh_young_kids  + factor(pobre) + factor(pobextre)  | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                             folio, data = final.df))
+
+summary(reg10 <-  lfe::felm(AD_obedience ~ BP + I(BP^2) + hh_log_wages +   num_f_adults + num_m_adults +
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+summary(reg11 <-  lfe::felm(AD_say_comm ~ BP + I(BP^2) + hh_log_wages +   num_f_adults + num_m_adults +
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)  | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+summary(reg12 <-  lfe::felm(AD_women_job ~ BP + I(BP^2) + hh_log_wages +   num_f_adults + num_m_adults +
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | 
+                              factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+summary(reg13 <-  lfe::felm(AD_equal_rights ~ BP + I(BP^2) + hh_log_wages +   num_f_adults + num_m_adults +
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | 
+                              factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+summary(reg14 <-  lfe::felm(AD_women_opinions ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) |
+                              factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+library(stargazer)
+stargazer(reg9, reg10, reg11, reg12, reg13, reg14, 
+          covariate.labels = c("$hat{mu}$", "$hat{mu}^2$", "HH Log Earnings", "# Women", "# Men", 
+                               "HH Size", "# Kids", "# Young Kids", "Government Poverty Dummy", 
+                               "Extreme Poverty Dummy", "Extreme Poverty Dummy 1", "Extreme Poverty Dummy 2"), 
+          title = "Power and the Family's Views on Women's Status")
+
+final.df$PAG_boys <- rowSums(cbind(final.df$PAG_boys_clothing, final.df$PAG_boys_shoes), na.rm = T) 
+final.df$PAG_girls <- rowSums(cbind(final.df$PAG_girls_clothing, final.df$PAG_girls_shoes), na.rm = T)                          
+final.df$PAG_womens <- rowSums(cbind(final.df$PAG_womens_clothing, final.df$PAG_womens_shoes), na.rm = T) 
+final.df$PAG_mens <- rowSums(cbind(final.df$PAG_mens_clothing, final.df$PAG_mens_shoes), na.rm = T) 
+
+final.df$PAG <- rowSums(cbind(final.df$PAG_boys, final.df$PAG_girls, final.df$PAG_womens, final.df$PAG_mens),
+                        na.rm=T)
+summary(final.df$PAG)
+
+
+summary(reg15 <-  lfe::felm(asinh(PAG_boys) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | #factor(pobre) + factor(pobextre) |
+                              factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+summary(reg16 <-  lfe::felm(asinh(PAG_girls) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | #factor(pobre) + factor(pobextre) |
+                              factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+summary(reg17 <-  lfe::felm(asinh(PAG_womens) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)| # |
+                              factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+summary(reg18 <-  lfe::felm(asinh(PAG_mens) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | #factor(pobre) + factor(pobextre) |
+                              factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+
+summary(reg19 <-  lfe::felm(asinh(PAG) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | #factor(pobre) + factor(pobextre) |
+                              factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+                              folio, data = final.df))
+
+stargazer(reg15, reg16, reg17, reg18, reg19, covariate.labels = c("$hat{mu}$", "$hat{mu}^2$", "HH Log Earnings", "# Women", "# Men", 
+                                                                  "HH Size", "# Kids", "# Young Kids", "Government Poverty Dummy", 
+                                                                  "Extreme Poverty Dummy", "Extreme Poverty Dummy 1", "Extreme Poverty Dummy 2"), 
+          title = "Power and Private Assignable Goods Expenditures")
+
+
+
+my_tobit1 <- censReg(formula = asinh(PAG_girls) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                               hh_size + hh_kids + hh_young_kids + #factor(pobre) + factor(pobextre) |
+                               factor(seven_states) +  factor(wavenumber) , left = 0, data = final.df, method = "BFGS")
+
+summary(my_tobit1)
+
+summary(my_tobit2 <- censReg(formula = asinh(PAG_boys) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                       hh_size + hh_kids + hh_young_kids + #factor(pobre) + factor(pobextre) |
+                       factor(seven_states) +  factor(wavenumber) , left = 0, data = final.df, method = "BFGS"))
+
+summary(my_tobit3 <- censReg(formula = asinh(PAG_womens) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                               hh_size + hh_kids + hh_young_kids + #factor(pobre) + factor(pobextre) |
+                               factor(seven_states) +  factor(wavenumber) , left = 0, data = final.df, method = "BFGS"))
+
+summary(my_tobit4 <- censReg(formula = asinh(PAG_mens) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+                               hh_size + hh_kids + hh_young_kids + #factor(pobre) + factor(pobextre) |
+                               factor(seven_states) +  factor(wavenumber) , left = 0, data = final.df, method = "BFGS"))
+
+
+# p <- plot(x = final.df$BP, y = predict(reg1, data = final.df))
+# 
+# 
+# ggplot(data = final.df) + 
+#   geom_point(mapping = aes(x = BP, y = DM_HH_fix_expenditures_T)) + 
+#   geom_smooth(mapping = aes(x = BP, y = DM_HH_fix_expenditures_T))
+# 
+# 
+# 
+# summary(reg_count_1 <- glmmML::glmmboot(DM_count_W ~  BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+#                                           hh_size + hh_kids + hh_young_kids + #factor(pobre) + factor(pobextre) +
+#                                           factor(wavenumber),
+#                                         cluster = folio, data = final.df, family="poisson"))
+# 
+# summary(reg_count_2 <- glmmML::glmmboot(DM_count_M ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
+#                                           hh_size + hh_kids + hh_young_kids  + 
+#                                           factor(wavenumber),
+#                                         cluster = folio, data = final.df, family="poisson"))
+# 
+# summary(reg_count_3 <- glmmML::glmmboot(DM_count_T ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids +
+#                                           factor(wavenumber), 
+#                                         cluster = folio, data = final.df, family="poisson"))
+# 
+# 
+# coefs.df <- tibble(Names = c("$hat{mu}$", "$hat{mu}^{2}$", "HH Log Earnings",
+#                              "Num Kids", "Num Young Kids"),
+#                    "Women Only" = as.numeric(unname(reg_count_1$coefficients)[1:5]),
+#                    "Men Only" = as.numeric(unname(reg_count_2$coefficients)[1:5]),
+#                    "Together" = as.numeric(reg_count_3$coefficients[1:5]))
+# 
+# se.df <- tibble(Names = paste0( c("$hat{mu}$", "$hat{mu}^{2}$", "HH Log Earnings",
+#                                   "Num Kids", "Num Young Kids", "Chicken Price", 
+#                                   "Beef Price", "Pork Price", "Lard Price", "Sardine Price", "Tuna Price", 
+#                                   "Milk Price", "Egg Price", "Bean Price", "Rice Price"), "_se"), 
+#                 Chicken.LPM = unname(p1$coefficients[1:15,2]),
+#                 Milk.LPM = unname(p2$coefficients[1:15,2]),
+#                 Chicken.Poi = unname(chick_Poisson$sd[1:15]),
+#                 Milk.Poi = unname(milk_Poisson$sd[1:15]))
+# 
+# table_6 <- bind_rows(coefs.df, se.df)
+# table_6[,2:5] <- round(table_6[,2:5], 3) 
+
+
+# Multinomial Logit
+# library(mlogit)
+# final.mdata <- mlogit.data(final.df[, c("DM_spend_women_income", "BP", "hh_log_wages")]
+#                            , shape = "wide", choice = "DM_spend_women_income")
+# 
+# filter(final.mdata, hh_log_wages > 0)
+# 
+# summary(mlogit(DM_spend_women_income ~ BP + I(BP^2) + hh_log_wages | 0 | 0, 
+#                data = final.mdata))
 
 
 

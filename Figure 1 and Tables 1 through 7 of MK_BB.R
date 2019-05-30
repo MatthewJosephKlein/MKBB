@@ -257,7 +257,6 @@ BP.Fun <- function(){ #Calls shadow wage function
        sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
        sample.analog$T_dad_total[sample.analog$wavenumber == 3])
   
-  
   return(list(sample.analog,  
               mean(sample.analog$BP[sample.analog$wave1 == 1], na.rm = T), 
               mean(sample.analog$BP[sample.analog$wave2 == 1], na.rm = T),
@@ -545,6 +544,15 @@ DiD <- (mean(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household
 
 DiD_reg_summary <- summary(lm(BP ~ treatment_household + wavenumber + I(treatment_household*wavenumber), data = subset(final.df, final.df$wavenumber < 3)))
 DiD_reg_summary
+
+sqrt(var(exp(sample.analog$log_wages[sample.analog$sex == 1 & sample.analog$LFP == 1]), na.rm=T))
+sqrt(var(exp(sample.analog$log_wages[sample.analog$sex == 0 & sample.analog$LFP == 1]), na.rm=T))
+
+summary(exp((sample.analog$log_wages[sample.analog$sex == 0 & sample.analog$LFP == 1])))
+summary(exp((sample.analog$log_wages[sample.analog$sex == 1 & sample.analog$LFP == 1])))
+
+
+
 # sqrt(DiD_reg_summary$cov.unscaled[4,4])
 
 # Chapter 2: Summary Stats for HH's and HH Heads #####
@@ -603,25 +611,84 @@ inflation_2000 <- 8.96
 summary(hh.df$hh_wages[hh.df$wavenumber==2]*(1-.1861)*(1-.1232))
 summary(hh.df$hh_wages[hh.df$wavenumber==3]*(1-.1861)*(1-.1232)*(1-0.0896))
 
+summary(exp(hh.df$log_wages[sample.analog$wavenumber==1 & sample.analog$sex==1 & sample.analog$LFP==1 &
+                         sample.analog$age > 15 & sample.analog$age < 66]))
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==1 & sample.analog$sex==1 & 
+                                             sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age < 66])
+
+# Men
+#1997
+summary(exp(sample.analog$log_wages[sample.analog$wavenumber==1 & sample.analog$sex==0 & sample.analog$LFP==1 &
+                              sample.analog$age > 15 & sample.analog$age < 66]))
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==1 & sample.analog$sex==0 & 
+                                             sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age < 66])
+
+(129.8 - 126)  / 126 # Median
+(160.69 - 127.6) / 160.69 # mean
+
+# 1999
+summary(exp(sample.analog$log_wages[sample.analog$wavenumber==2 & sample.analog$sex==0 & sample.analog$LFP==1 &
+                              sample.analog$age > 15 & sample.analog$age < 66])*(1-.1232))
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==2 & sample.analog$sex==0 & 
+                                           sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age < 66])
+
+(129.8 - 126)  / 126
+
+
+# 2000
+summary(exp(sample.analog$log_wages[sample.analog$wavenumber==3 & sample.analog$sex==0 & sample.analog$LFP==1 &
+                                      sample.analog$age > 15 & sample.analog$age < 66])*(1-.1232)*(1-0.0896))
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==3 & sample.analog$sex==0 & 
+                                           sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age < 66])
+
+(192-167.8) / 192
+
+
+# Women 
+summary(exp(sample.analog$log_wages[sample.analog$wavenumber==1 & sample.analog$sex==1 & sample.analog$LFP==1 &
+                                      sample.analog$age > 15 & sample.analog$age < 66]))
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==1 & sample.analog$sex==1 & 
+                                           sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age < 66])
+
+sqrt(var(exp(sample.analog$log_wages[sample.analog$wavenumber==1 &
+                                       sample.analog$sex==1 & 
+                                       sample.analog$LFP==1 & 
+                                       sample.analog$head_dummy==1 &
+                                      sample.analog$age > 15 & 
+                                       sample.analog$age < 66]), na.rm=T))
+sqrt(var(sample.analog$y_hat_women_combined[sample.analog$wavenumber==1 & 
+                                              sample.analog$sex==1 & 
+                                             sample.analog$LFP==1 & 
+                                              sample.analog$age > 15 & 
+                                              sample.analog$head_dummy==1 &
+                                              sample.analog$age < 66], na.rm=T))
+
+
+
+summary(hh.df$hh_wages[hh.df$wavenumber==2]*(1-.1861)*(1-.1232))
+summary(hh.df$hh_wages[hh.df$wavenumber==3]*(1-.1861)*(1-.1232)*(1-0.0896))
+
 summary(hh.df$indigenous_language[hh.df$wavenumber==1])
 summary(hh.df$indigenous_language[hh.df$wavenumber==2])
 summary(hh.df$indigenous_language[hh.df$wavenumber==3])
 
-summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==1 & sample.analog$sex==1 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
-summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==2 & sample.analog$sex==1 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
-summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==3 & sample.analog$sex==1 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
 
-summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==1 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
-summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==2 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
-summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==3 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <71])
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==2 & sample.analog$sex==1 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <66])
+summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==3 & sample.analog$sex==1 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <66])
 
-summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==1 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
-summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==2 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
-summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==3 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
 
-summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==1 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
-summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==2 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
-summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==3 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
+
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==1 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <66])
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==2 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <66])
+summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==3 & sample.analog$sex==0 & sample.analog$LFP==1 & sample.analog$age > 15 & sample.analog$age <66])
+
+# summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==1 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
+# summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==2 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
+# summary(sample.analog$y_hat_women_combined[sample.analog$wavenumber==3 & sample.analog$sex==1  & sample.analog$age > 15 & sample.analog$age <71])
+# 
+# summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==1 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
+# summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==2 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
+# summary(sample.analog$y_hat_men_combined[sample.analog$wavenumber==3 & sample.analog$sex==0 & sample.analog$age > 15 & sample.analog$age <71])
 
 prop.table(table(hh.df$seven_states[ hh.df$wavenumber==1]))
 prop.table(table(hh.df$seven_states[ hh.df$wavenumber==2]))
@@ -947,33 +1014,6 @@ hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0],
      breaks = 100, xlim = c(0.15,0.75), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
 
-# Color Version for website and other media
-
-
-par(mfrow=c(3,1))
-
-hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 0], col = rgb(0.25,0.75,0.25,0.25, 0.25), main = "1997", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.65), freq=FALSE, ylab = "Percent of Households")
-par(new = T)
-hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 1],
-     col = rgb(0,0,1,0.25, 0.25),  
-     breaks = 100, xlim = c(0.15,0.65), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
-
-legend("topright", legend = c("control (green)", "treatment (blue)"), col = c("light green", "blue"), pch = c(15,15))
-
-hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total == 0], col = rgb(0.25,0.75,0.25,0.25, 0.25), main = "1999", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.65), freq=FALSE, ylab = "Percent of Households")
-par(new = T)
-hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total > 0], col = rgb(0,0,1,0.25, 0.25), 
-     breaks = 100, xlim = c(0.15,0.65), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
-
-hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total == 0], col = rgb(0.25,0.75,0.25,0.25, 0.25), main = "2000", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.65), freq=FALSE, ylab = "Percent of Households")
-par(new = T)
-hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0], col = rgb(0,0,1,0.25, 0.25), 
-     breaks = 100, xlim = c(0.15,0.65), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
-
-
 # Chapter 6: Generating the Chicken + Milk Table ####
 
 p1 <- summary(chick_LPM <- felm(pollo ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
@@ -1050,7 +1090,7 @@ stargazer::stargazer(chick_LPM, milk_LPM, chick_LPM, milk_LPM, single.row=F,
                                           "Milk Price", "Egg Price", "Bean Price", "Rice Price"), 
                      title = "Chicken and Milk LPM and Poisson Results, FE Not Shown")
 
-# Chapter 7: generating 62 Point Estimate Results ###### 
+# Chapter 7: generating 62 Point Estimate Results + Bonferroni Correction ###### 
 
 keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & is.na(BP) == FALSE})
 final.df.subset <- final.df[keep.index, ]
@@ -1248,7 +1288,6 @@ boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstr
 boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_07_19.csv") 
 boots <- bind_rows(boots1, boots2)
 
-
 boots.lpm <- boots[,c("LPM.Marginal.Chicken", "LPM.Marginal.BeefPork", "LPM.Marginal.Eggs" ,  "LPM.Marginal.Milk" ,
                       "LPM.Marginal.Fish" ,  "LPM.Marginal.Tuna" , "LPM.Marginal.Lard"  , 
                       # VegFruits  
@@ -1330,6 +1369,36 @@ results.df$rhs.low <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile
 results.df$rhs.high <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.975))))
 
 
+# Bonferonni
+table(results.df$lpm.low > 0) # Not - Corrected
+
+bon.lpm <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.025))))
+table(bon.lpm > 0)
+
+table(results.df$poi.low < 0) # Not - Corrected
+bon.poi <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.poisson[,x], 1499)}) # Corrected
+table(bon.poi > 0)
+
+table(results.df$sq.low > 0) # Not - Corrected
+bon.lpm <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.BP2[,x], 1499)}) # Corrected
+table(bon.lpm > 0)
+
+table(results.df$rhs.low > 0) # Not - Corrected
+bon.lpm <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.Cross[,x], 1499)}) # Corrected
+table(bon.lpm > 0)
+
+# Calculating the point at which nutritional attainment is maximized
+equality <- filter(results.df, Names %in% c("Chicken", "Beef/Pork", "Milk", "Eggs", "Potatoes", 
+                                            "Bananas", "Oranges", "Apples", "Grees", "Carrots", "Tomatoes",
+                                            "White Bread", "Biscuits", "Cup Noodles")) %>%
+            select(Names, LPM, Squared) %>%
+  mutate(sol = -(LPM /(Squared)))
+
+summary(equality$sol)
+
+
+
+
 results.df <- results.df %>% 
   mutate(rhs = c(la.chick * DiD, # Animal Products
                  la.BPork * DiD, la.eggs * DiD, la.milk * DiD, la.fish * DiD, la.tuna * DiD, la.lard * DiD,  
@@ -1384,9 +1453,9 @@ panel_1 <- ggplot(data = results.df) +
   theme(axis.ticks = element_blank(), 
      # axis.text.y = element_blank(),
       axis.title.y = element_blank(), 
-     axis.title.x = element_blank(),
-      legend.position="none") +
-  labs(title = "Linear Probability Model Results", y = " ")  + 
+     axis.title.x = element_blank(), 
+     legend.position = "none") +
+  labs(title = "Marginal Effect of Empowerment on Diet", y = " ")  + 
   coord_flip()
 
 panel_1
@@ -1398,7 +1467,10 @@ levels(results.df$Significant) <- c("No", "Yes")
 
 panel_2 <- ggplot(data = results.df) + 
   geom_point(mapping = aes(x = Names, y = Poi)) + 
-  geom_errorbar(mapping = aes(x = Names, y = Poi, ymin=poi.low, ymax=poi.high,
+  geom_errorbar(mapping = aes(x = Names, 
+                              y = Poi,
+                              ymin = poi.low,
+                              ymax = poi.high,
                               color = Significant)) + 
   scale_x_discrete(limits = results.df$Names,
                    labels = results.df$Names) +
@@ -1417,7 +1489,7 @@ panel_2 <- ggplot(data = results.df) +
   theme(axis.text.y = element_blank(), 
         axis.title.y = element_blank(),
         axis.title.x = element_blank(),
-        axis.ticks = element_blank(), 
+        axis.ticks = element_blank(),
         legend.position = "none") + 
   labs(title = "Count Data Model Results", 
        y = "Point Estimate and CI")  + coord_flip()  
@@ -1429,31 +1501,24 @@ results.df$Significant <- factor(ifelse(results.df$sq.high < 0, 1,
                                         results.df$Significant))
 levels(results.df$Significant) <- c("No", "Yes")
 
-panel_3 <- ggplot(data = results.df) + 
+panel_3 <- ggplot(data = results.df) +
   geom_point(mapping = aes(x = Names, y = Squared)) + 
-  geom_errorbar(mapping = aes(x = Names, y = Squared, ymin=sq.low, ymax=sq.high, 
+  geom_errorbar(mapping = aes(x = Names,
+                              ymin = sq.low,
+                              ymax = sq.high, 
                               color = Significant)) + 
- # scale_x_discrete(limits = results.df$Names,
-#                   labels = results.df$Names) +
-  # scale_x_discrete(limits = results.df$Names,
-  #                  labels = c("A1", "A2", "A3", 
-  #                             "A4", "A5", "A6", 
-  #                             "A7", "FV1", "FV2",
-  #                             "FV3", "FV4", "FV5", "FV6", "FV7", 
-  #                             "FV8", "FV9",
-  #                             "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", 
-  #                             "O1", "O2", "O3", "O4", "O5", "O6", "O7")) +
+  scale_x_discrete(limits = results.df$Names,
+                   labels = results.df$Names) +
   geom_hline(yintercept=0, linetype = "dashed") +
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(#axis.text.x = element_text(color="navy", size=12, angle=90), 
-        axis.ticks = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        legend.position="none") + 
-  labs(title = "Power Squared Results", y = " ")  + 
+  theme(axis.ticks = element_blank(), 
+    #    axis.text.y = element_blank(),
+        axis.title.y = element_blank(), 
+        axis.title.x = element_blank(), 
+        legend.position = "none") +
+  labs(title = "Second Derivative Results", y = " ")  + 
   coord_flip()
 
 panel_3
@@ -1488,12 +1553,23 @@ p <- cowplot::plot_grid(panel_1, panel_2, panel_3, panel_4,
                    align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
                    nrow=1)
 
+p2 <- cowplot::plot_grid(panel_1, panel_2,  
+                        align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
+                        nrow=1)
+
+p3 <- cowplot::plot_grid(panel_3, panel_4,  
+                         align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
+                         nrow=1)
+p3
+
 #create common x label
 x.grob <- textGrob("Point Estimates and Confidence Intervals", 
                    gp=gpar(fontface="bold", col="black", fontsize=15))
+title.grob <- textGrob("Power and Diet", 
+                                 gp=gpar(fontface="bold", col="black", fontsize=24))
 
 
-grid.arrange(arrangeGrob(p, bottom = x.grob))
+grid.arrange(arrangeGrob(p, bottom = x.grob, top = title.grob))
 
 # Check that the right confidence intervals are paired with the right foods. 
 colnames(select(boots, starts_with("LPM")))
@@ -2091,6 +2167,59 @@ stargazer::stargazer(select(results.df, Names, LPM, LPM.CI, Poi, Poisson.CI),
 
 
 
+# Chapter 12: Graphical Abstract construction ####
 
+
+# Graphical Abstract Component 
+
+
+par(mfrow=c(2,1))
+
+final.df$Group <- factor(final.df$treatment_household) 
+levels(final.df$Group) <- c("Control", "Treatment")
+
+panel_top_left <- panel_bottom_left <- ggplot(data = filter(final.df, wavenumber == 1 & BP < 0.66)) + 
+  geom_histogram(mapping = aes(x = BP, y= ..density.., fill = Group, color = Group), bins = 40) +
+  theme(panel.grid.minor = element_blank()) + 
+  labs(x = "Women's Bargaining Power",
+       y = "Frequency", title = "1997, Pre-Treatment") +
+  geom_density(mapping = aes(x = BP, group = Group), size = 1)
+  
+panel_top_left
+
+panel_bottom_left <- ggplot(data = filter(final.df, wavenumber == 2 & BP < 0.66)) + 
+  geom_histogram(mapping = aes(x = BP, y= ..density.., fill = Group, color = Group), bins = 40) +
+  theme(panel.grid.minor = element_blank()) + 
+  labs(x = "Women's Bargaining Power",
+       y = "Frequency", title = "1999, Post-Treatment") +
+  geom_density(mapping = aes(x = BP, group = Group), size = 1)
+ 
+panel_bottom_left
+
+panel_left <- plot_grid(panel_top_left, 
+                        panel_bottom_left, 
+                        align = 'v', 
+                        axis = "b", 
+                        ncol = 1)
+
+panel_left
+
+graphical_abstract <- plot_grid(panel_left, 
+                               panel_1, 
+                               align = "h")
+                              # labels = c("Progresa Empowered Women", 
+                               #           "Empowerment Subsequently Caused Nutritional Imporvements"))
+
+graphical_abstract
+
+library(grid)
+library(gridExtra)
+
+
+title.grob <- textGrob("Progresa's Cash Transfer Empowered Women, Empowerment Subsequently Caused Improvement in Diet", 
+                       gp=gpar(fontface="bold", col="black", fontsize=20))
+
+
+grid.arrange(arrangeGrob(graphical_abstract, top = title.grob))
 
 

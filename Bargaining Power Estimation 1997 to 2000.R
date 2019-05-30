@@ -355,8 +355,10 @@ hh.df_inter$RSW[hh.df_inter$wave3 == 1] <- hh.df_inter$Mom_SW_combined[hh.df_int
                                                                                                      hh.df_inter$Dad_SW_combined[hh.df_inter$wave3 == 1])
 
 
-hh.df_inter$BP[hh.df_inter$wave1 == 1] <- hh.df_inter$Mom_SW_combined[hh.df_inter$wave1 == 1]  / (hh.df_inter$Mom_SW_combined[hh.df_inter$wave1 == 1] + 
-                                                                                                    hh.df_inter$Dad_SW_combined[hh.df_inter$wave1 == 1])
+
+hh.df_inter$BP[hh.df_inter$wave1 == 1] <- (1/2) + (1/2)*((hh.df_inter$Mom_SW_combined[hh.df_inter$wave1 == 1] -
+                                                           hh.df_inter$Dad_SW_combined[hh.df_inter$wave1 == 1])/ 
+                                                           hh.df_inter$ BREAK CODE. THIS IS OLD)
 
 hh.df_inter$BP[hh.df_inter$wave2 == 1] <- (hh.df_inter$Mom_SW_combined[hh.df_inter$wave2 == 1] + hh.df_inter$progresa_income_total[hh.df_inter$wave2 == 1])  /
   (hh.df_inter$Mom_SW_combined[hh.df_inter$wave2 == 1] + hh.df_inter$Dad_SW_combined[hh.df_inter$wave2 == 1] + 

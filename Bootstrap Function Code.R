@@ -62,6 +62,8 @@ hh.df$prop_usa_migrant_dummy <- ifelse(hh.df$prop_usa_migrant > 0 & !is.na(hh.df
 hh.df$prop_mex_migrant_dummy <- ifelse(hh.df$prop_mex_migrant > 0 & !is.na(hh.df$prop_mex_migrant), 1, 0)
 hh.df$otherincomeval_dummy <- ifelse(hh.df$otherincomeval > 0, 1, 0)
 
+hh.df <- hh.df %>% filter(hh_wages != 0)
+
 # A) BP Function (Hyp 1)
 #    A.1) Shadow Earnings function
 # B) LPM.Marginal.Fun (Hyp 2, 3)
@@ -217,38 +219,48 @@ BP.Fun <- function(){ #Calls shadow wage function
   names(Dad_SW_combined.df) <- c("folio", "wavenumber", "Dad_SW_combined")
   sample.analog <- left_join(sample.analog, Dad_SW_combined.df)
   
-  #Step 4: Generating the relative shadow earnings BP Proxy
+  #Step 4: Generating the relative shadow earnings BP Estimtor
   
-  #BP = (\hat{E}_f + T_f) / (\hat{E}_f + T_f + \hat{E}_m + T_m)
+  # BP <- 1/2 + 1/2 ((y_f^o - Y_m^o) / y)
   
  # There must be a tidy way to complete the below process  
  # sample.analog <- sample.analog %>% group_by(wavenumber) %>%
  #    mutate()
   
-  sample.analog$BP[sample.analog$wave1 == 1] <- 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
-     sample.analog$T_mom_total[sample.analog$wavenumber == 1] )  / 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 1] +
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 1])
   
-  sample.analog$BP[sample.analog$wavenumber == 2] <- 
+  sample.analog$BP[sample.analog$wave1 == 1] <-
+    (1/2) + (1/2)*((
+    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
+     sample.analog$T_mom_total[sample.analog$wavenumber == 1]) - 
+    (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
+        sample.analog$T_dad_total[sample.analog$wavenumber == 1])) / 
+      (sample.analog$hh_wages[sample.analog$wavenumber == 1]))
+  # + sample.analog$T_mom_total[sample.analog$wavenumber == 1] +
+  #        sample.analog$T_dad_total[sample.analog$wavenumber == 1]))
+    
+
+  
+  
+  sample.analog$BP[sample.analog$wavenumber == 2] <-
+    (1/2) + (1/2)*((
     (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 2])  /
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] +
-       sample.analog$T_mom_total[sample.analog$wavenumber == 2] + 
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 2])
+       sample.analog$T_mom_total[sample.analog$wavenumber == 2]) - 
+      (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
+         sample.analog$T_dad_total[sample.analog$wavenumber == 2])) / 
+      (sample.analog$hh_wages[sample.analog$wavenumber == 2]))
   
-  sample.analog$BP[sample.analog$wavenumber == 3] <- 
+  
+  sample.analog$BP[sample.analog$wavenumber == 3] <-
+    (1/2) + (1/2)*((
     (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 3])  /
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] +
-       sample.analog$T_mom_total[sample.analog$wavenumber == 3] + 
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 3])
+       sample.analog$T_mom_total[sample.analog$wavenumber == 3]) - 
+      (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
+         sample.analog$T_dad_total[sample.analog$wavenumber == 3])) / 
+      (sample.analog$hh_wages[sample.analog$wavenumber == 3]))
   
+  # The Kuhn-tucker conditions don't allow for eta < 0 or eta > 1 (see [lambda_3] and [lambda_4] in Section 3)
+  sample.analog$BP[sample.analog$BP <= 0] <- 0  
+  sample.analog$BP[sample.analog$BP >= 1] <- 1
   
   return(list(sample.analog,  
               mean(sample.analog$BP[sample.analog$wave1 == 1], na.rm = T), 
@@ -279,7 +291,8 @@ LPM_ME_Fun_animal <- function(food_name){
 # (D) Poisson Model
 Poisson_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages +  hh_kids + hh_young_kids + wave2 + wave3 +
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages +  hh_kids + hh_young_kids + 
+                   wave2 + wave3 +
                    chicken.price_hybrid +
                    beef.price_hybrid + pork.price_hybrid +   
                    lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
@@ -445,7 +458,7 @@ Poisson_ME_Fun_misc <- function(food_name){
   p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids +  wave2 + wave3 + 
                    sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
                    veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
-                   rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid 
+                   rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
                  cluster = factor(folio),
                  data = final.df.subset, family = poisson)
   
@@ -612,7 +625,7 @@ while(j <= B) { #generating the bootstrap
   
   DiD_reg_summary <- summary(lm(BP ~ treatment_household + wavenumber + I(treatment_household*wavenumber), data = subset(final.df, final.df$wavenumber < 3)))
   
-  boot_t[j] = (DiD[j] - 0.240468)/DiD_reg_summary$coefficients[4,2] 
+  boot_t[j] = (DiD[j] - 0.220288)/DiD_reg_summary$coefficients[4,2] 
   
   keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & 
                                  is.na(BP) == FALSE })# & 
@@ -1106,8 +1119,10 @@ write.csv(boot, file = "Bootstrap_Results_03_07_19.csv")
 # Generating the Efron Intervals ####
 
 # Did Progresa increase women's bargaining power? 
-critical.pivot <- 0.240468 - ( 0.003846 * quantile(boot_t,probs=c(0.995,0.005)))
-critical.pivot # Yes, we reject at the 95% level the null that it did not. 
+critical.pivot.high <- 0.240468 - ( 0.003846 * quantile(boot_t,probs=c(0.995)))
+critical.pivot.low <- 0.240468 + ( 0.003846 * quantile(boot_t,probs=c(0.025)))
+critical.pivot.high   # Yes, we reject at the 95% level the null that it did not. 
+critical.pivot.low 
 
 # Did Progresa increase the associated 
 quantile(boot[,"DiD"],probs=c(.005,.995))
@@ -1117,7 +1132,7 @@ quantile(boot[,"DiD"],probs=c(.005,.995))
 map(.x = list(LPM.Marginal.Lard  ,  LPM.Marginal.Tuna  , LPM.Marginal.Fish  , LPM.Marginal.Milk  , 
         LPM.Marginal.Eggs  , LPM.Marginal.Chicken, LPM.Marginal.BeefPork), 
     .f = function(x) { 
-      quantile(x ,probs=c(.025,.975))})
+      quantile(x ,probs=c(.025,.975), na.rm=T)})
 
 # LPM Veg: 
 map(.x = list(LPM.Marginal.Tomato , 
@@ -1130,7 +1145,7 @@ map(.x = list(LPM.Marginal.Tomato ,
               LPM.Marginal.Onion  ,
               LPM.Marginal.Lime), 
     .f = function(x) { 
-      quantile(x ,probs=c(.025,.975))})
+      quantile(x ,probs=c(.025,.975), na.rm=T)})
 
 
 
@@ -1142,7 +1157,7 @@ map(.x = list(LPM.Marginal.WFlour   ,
               LPM.Marginal.WBread , 
               LPM.Marginal.Tortillas ),
     .f = function(x) { 
-      quantile(x ,probs=c(.05,.95))})
+      quantile(x ,probs=c(.05,.95), na.rm=T)})
 
         
 map(.x = list( LPM.Marginal.Sugar   ,
