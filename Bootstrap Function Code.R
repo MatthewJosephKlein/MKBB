@@ -235,13 +235,8 @@ BP.Fun <- function(){ #Calls shadow wage function
     (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
         sample.analog$T_dad_total[sample.analog$wavenumber == 1])) / 
       (sample.analog$hh_wages[sample.analog$wavenumber == 1]))
-  # + sample.analog$T_mom_total[sample.analog$wavenumber == 1] +
-  #        sample.analog$T_dad_total[sample.analog$wavenumber == 1]))
-    
 
-  
-  
-  sample.analog$BP[sample.analog$wavenumber == 2] <-
+   sample.analog$BP[sample.analog$wavenumber == 2] <-
     (1/2) + (1/2)*((
     (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
        sample.analog$T_mom_total[sample.analog$wavenumber == 2]) - 
@@ -1116,23 +1111,28 @@ boot <- as.data.frame(cbind(mean_BP_97, mean_BP_99, mean_BP_00, boot_t,  DiD, # 
                               LPM.BP2.VOil    , LPM.BP2.Alcohol ,
                               LPM.BP2.BCereal ,  LPM.BP2.Pastries))
 
-write.csv(boot, file = "Bootstrap_Results_03_07_19.csv")
+write.csv(boot, file = "Bootstrap_Results_05_31_19.csv")
 
 # Generating the Efron Intervals ####
 
 # Did Progresa increase women's bargaining power? 
-critical.pivot.high <- 0.240468 - ( 0.003846 * quantile(boot_t,probs=c(0.995)))
+critical.pivot.high <- 0.240468 - ( 0.003846 * quantile(boot_t,probs=c(0.975)))
 critical.pivot.low <- 0.240468 + ( 0.003846 * quantile(boot_t,probs=c(0.025)))
 critical.pivot.high   # Yes, we reject at the 95% level the null that it did not. 
 critical.pivot.low 
 
 # Did Progresa increase the associated 
-quantile(boot[,"DiD"],probs=c(.005,.995))
+quantile(boot[,"DiD"],probs=c(.025,.975), na.rm=T)
 
 
 # LPM Animals:
-map(.x = list(LPM.Marginal.Lard  ,  LPM.Marginal.Tuna  , LPM.Marginal.Fish  , LPM.Marginal.Milk  , 
-        LPM.Marginal.Eggs  , LPM.Marginal.Chicken, LPM.Marginal.BeefPork), 
+map(.x = list(LPM.Marginal.Lard  ,
+              LPM.Marginal.Tuna  , 
+              LPM.Marginal.Fish  , 
+              LPM.Marginal.Milk  , 
+              LPM.Marginal.Eggs  , 
+              LPM.Marginal.Chicken, 
+              LPM.Marginal.BeefPork), 
     .f = function(x) { 
       quantile(x ,probs=c(.025,.975), na.rm=T)})
 
@@ -1159,7 +1159,7 @@ map(.x = list(LPM.Marginal.WFlour   ,
               LPM.Marginal.WBread , 
               LPM.Marginal.Tortillas ),
     .f = function(x) { 
-      quantile(x ,probs=c(.05,.95), na.rm=T)})
+      quantile(x ,probs=c(.025,.975), na.rm=T)})
 
         
 map(.x = list( LPM.Marginal.Sugar   ,
@@ -1171,7 +1171,7 @@ map(.x = list( LPM.Marginal.Sugar   ,
                LPM.Marginal.Pastries,
                LPM.Marginal.BCereal ), 
     .f = function(x) { 
-      quantile(x ,probs=c(.05,.95))})
+      quantile(x ,probs=c(.025,.975))})
 
 # Intensive Margin
 
@@ -1184,7 +1184,7 @@ map(.x = list( Poisson.Marginal.Lard ,
                Poisson.Marginal.Chicken,
                Poisson.Marginal.BeefPork), 
     .f = function(x) { 
-      quantile(x ,probs=c(.05,.95))})
+      quantile(x ,probs=c(.025,.975))})
 
 
 # Fruit and veg
@@ -1198,7 +1198,7 @@ map(.x = list( Poisson.Marginal.Tomato ,
                Poisson.Marginal.Onion ,  
                Poisson.Marginal.Lime), 
     .f = function(x) { 
-      quantile(x ,probs=c(.05,.95))})
+      quantile(x ,probs=c(.025,.975))})
 
 
 map(.x = list( Poisson.Marginal.WFlour , 
@@ -1209,7 +1209,7 @@ map(.x = list( Poisson.Marginal.WFlour ,
                Poisson.Marginal.WBread , 
                Poisson.Marginal.Tortillas), 
     .f = function(x) { 
-      quantile(x ,probs=c(.05,.95))})
+      quantile(x ,probs=c(.025,.975))})
 
 map(.x = list( Poisson.Marginal.Sugar , 
                Poisson.Marginal.Coffee ,
@@ -1220,7 +1220,7 @@ map(.x = list( Poisson.Marginal.Sugar ,
                Poisson.Marginal.Pastries, 
                Poisson.Marginal.BCereal ), 
     .f = function(x) { 
-      quantile(x ,probs=c(.05,.95))})
+      quantile(x ,probs=c(.025,.975))})
 
 
 

@@ -233,29 +233,34 @@ BP.Fun <- function(){ #Calls shadow wage function
   # sample.analog <- sample.analog %>% group_by(wavenumber) %>%
   #    mutate()
   
-  sample.analog$BP[sample.analog$wave1 == 1] <- 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 1] )  / 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 1] +
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 1])
+  sample.analog$BP[sample.analog$wave1 == 1] <-
+    (1/2) + (1/2)*((
+      (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
+         sample.analog$T_mom_total[sample.analog$wavenumber == 1]) - 
+        (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
+           sample.analog$T_dad_total[sample.analog$wavenumber == 1])) / 
+        (sample.analog$hh_wages[sample.analog$wavenumber == 1]))
   
-  sample.analog$BP[sample.analog$wavenumber == 2] <- 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 2])  /
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] +
-       sample.analog$T_mom_total[sample.analog$wavenumber == 2] + 
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 2])
+  sample.analog$BP[sample.analog$wavenumber == 2] <-
+    (1/2) + (1/2)*((
+      (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
+         sample.analog$T_mom_total[sample.analog$wavenumber == 2]) - 
+        (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
+           sample.analog$T_dad_total[sample.analog$wavenumber == 2])) / 
+        (sample.analog$hh_wages[sample.analog$wavenumber == 2]))
   
-  sample.analog$BP[sample.analog$wavenumber == 3] <- 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 3])  /
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] +
-       sample.analog$T_mom_total[sample.analog$wavenumber == 3] + 
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 3])
+  
+  sample.analog$BP[sample.analog$wavenumber == 3] <-
+    (1/2) + (1/2)*((
+      (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] + 
+         sample.analog$T_mom_total[sample.analog$wavenumber == 3]) - 
+        (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
+           sample.analog$T_dad_total[sample.analog$wavenumber == 3])) / 
+        (sample.analog$hh_wages[sample.analog$wavenumber == 3]))
+  
+  # The Kuhn-tucker conditions don't allow for eta < 0 or eta > 1 (see [lambda_3] and [lambda_4] in Section 3)
+  sample.analog$BP[sample.analog$BP <= 0] <- 0  
+  sample.analog$BP[sample.analog$BP >= 1] <- 1
   
   return(list(sample.analog,  
               mean(sample.analog$BP[sample.analog$wave1 == 1], na.rm = T), 
@@ -1284,9 +1289,10 @@ results.df <- as.tibble(results.df)
 results.df
 
 # Chapter 8: Constructing the Results Figures #### 
-boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results1000_03_07_19.csv")
-boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_07_19.csv") 
-boots <- bind_rows(boots1, boots2)
+boots <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_05_31_19.csv")
+#boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results1000_03_07_19.csv")
+#boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_07_19.csv") 
+#boots <- bind_rows(boots1, boots2)
 
 boots.lpm <- boots[,c("LPM.Marginal.Chicken", "LPM.Marginal.BeefPork", "LPM.Marginal.Eggs" ,  "LPM.Marginal.Milk" ,
                       "LPM.Marginal.Fish" ,  "LPM.Marginal.Tuna" , "LPM.Marginal.Lard"  , 
