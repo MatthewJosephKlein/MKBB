@@ -273,11 +273,13 @@ BP.Fun <- function(){ #Calls shadow wage function
 LPM_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   # print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages +
+               hh_kids + hh_young_kids + 
                chicken.price_hybrid +
                beef.price_hybrid + pork.price_hybrid +   
                lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
-               milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid |folio + wavenumber | 0 | loc_id,
+               milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid |
+               folio + wavenumber | 0 | loc_id,
              data = final.df)
   
   return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T),
