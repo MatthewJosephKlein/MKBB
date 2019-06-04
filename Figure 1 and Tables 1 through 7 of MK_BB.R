@@ -998,25 +998,29 @@ par(mfrow=c(3,1))
 #hist(final.df$BP[final.df$wavenumber == 1], col = rgb(1,1,1), main = "1997", xlab = "Bargaining Power", 
 #     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
 
-hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 0], col = rgb(1,1,1,0.25, 0.25), main = "1997", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.75), freq=FALSE, ylab = "Percent of Households")
+hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 0],
+     col = rgb(1,1,1,0.25, 0.25), main = "1997", xlab = "Bargaining Power", 
+     breaks = 35, xlim = c(0,1), ylim = c(0,6), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
 hist(final.df$BP[final.df$wavenumber == 1 & final.df$treatment_household == 1], col = rgb(0,0,0,0.25, 0.25),  
-     breaks = 100, xlim = c(0.15,0.75), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+     breaks = 35, xlim = c(0,1), ylim = c(0, 6), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
 legend("topright", legend = c("Untreated (white)", "Treated (grey)"), col = c("black", "black"), pch = c(0,15))
 
-hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total == 0], col = rgb(1,1,1,0.25, 0.25), main = "1999", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.75), freq=FALSE, ylab = "Percent of Households")
+hist(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household_0 == 0], 
+     col = rgb(1,1,1,0.25, 0.25), main = "1999", xlab = "Bargaining Power", 
+     breaks = 35, xlim = c(0,1), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
-hist(final.df$BP[final.df$wavenumber == 2 & final.df$progresa_income_total > 0], col = rgb(0,0,0,0.25, 0.25), 
-     breaks = 100, xlim = c(0.15,0.75), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+hist(final.df$BP[final.df$wavenumber == 2 & final.df$treatment_household_0], col = rgb(0,0,0,0.25, 0.25), 
+     breaks = 35, xlim = c(0,1), ylim = c(0, 6), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
-hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total == 0], col = rgb(1,1,1, 0.25, 0.25), main = "2000", xlab = "Bargaining Power", 
-     breaks = 100, xlim = c(0.15,0.75), freq=FALSE, ylab = "Percent of Households")
+hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total == 0],
+     col = rgb(1,1,1, 0.25, 0.25), main = "2000", xlab = "Bargaining Power", 
+     breaks = 35, xlim = c(0,1), freq=FALSE, ylab = "Percent of Households")
 par(new = T)
-hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0], col = rgb(0,0,0, 0.25, 0.25), 
-     breaks = 100, xlim = c(0.15,0.75), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0], 
+     col = rgb(0,0,0, 0.25, 0.25), 
+     breaks = 35, xlim = c(0,1), ylim = c(0, 5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
 
 
 # Chapter 6: Generating the Chicken + Milk Table ####
@@ -1289,7 +1293,8 @@ results.df <- as.tibble(results.df)
 results.df
 
 # Chapter 8: Constructing the Results Figures #### 
-boots <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_05_31_19.csv")
+boots_1 <- read.csv("Bootstrap_Results_05_31_19.csv")
+boots_1 <- read.csv("Bootstrap_Results_05_31_19.csv")
 #boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results1000_03_07_19.csv")
 #boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_07_19.csv") 
 #boots <- bind_rows(boots1, boots2)
@@ -1359,20 +1364,20 @@ boots.RHS <- boots[,c("RHS.Chicken", "RHS.BeefPork", "RHS.Eggs" ,  "RHS.Milk" ,
                         "RHS.VOil"   ,  "RHS.Alcohol" ,   "RHS.BCereal"  )]
 
 
-results.df$lpm.low <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.025))))
-results.df$lpm.high <-c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.975))))
+results.df$lpm.low <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.05))))
+results.df$lpm.high <-c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.95))))
 
-results.df$poi.low <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.025))))
-results.df$poi.high <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.975))))
+results.df$poi.low <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.05))))
+results.df$poi.high <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.95))))
 
-results.df$sq.low <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(x) quantile(x, 0.025))))
-results.df$sq.high <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(x) quantile(x, 0.975))))
+results.df$sq.low <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(x) quantile(x, 0.05))))
+results.df$sq.high <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(x) quantile(x, 0.95))))
 
-results.df$c.low <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.025))))
-results.df$c.high <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.975))))
+results.df$c.low <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.05))))
+results.df$c.high <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.95))))
 
-results.df$rhs.low <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.025))))
-results.df$rhs.high <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.975))))
+results.df$rhs.low <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.05))))
+results.df$rhs.high <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.95))))
 
 
 # Bonferonni
@@ -1444,7 +1449,7 @@ results.df$Significant <- factor(ifelse(results.df$lpm.high < 0, 1,
 levels(results.df$Significant) <- c("No", "Yes")
 
 panel_1 <- ggplot(data = results.df) +
-  geom_point(mapping = aes(x = Names, y = LPM)) + 
+  geom_point(mapping = aes(x = Names, y = LPM)) +
   geom_errorbar(mapping = aes(x = Names,
                               y = LPM,
                               ymin=lpm.low,
@@ -1492,7 +1497,7 @@ panel_2 <- ggplot(data = results.df) +
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(axis.text.y = element_blank(), 
+  theme(#axis.text.y = element_blank(), 
         axis.title.y = element_blank(),
         axis.title.x = element_blank(),
         axis.ticks = element_blank(),
@@ -1544,7 +1549,7 @@ panel_4 <- ggplot(data = results.df) + geom_point(mapping = aes(x = Names, y = C
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(axis.text.y = element_blank(), # element_text(color="navy", size=12, angle=90), 
+  theme(#axis.text.y = element_blank(), # element_text(color="navy", size=12, angle=90), 
         axis.title.y = element_blank(),
         axis.title.x = element_blank(),
          axis.ticks = element_blank()) + 

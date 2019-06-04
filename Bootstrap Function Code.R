@@ -1111,12 +1111,12 @@ boot <- as.data.frame(cbind(mean_BP_97, mean_BP_99, mean_BP_00, boot_t,  DiD, # 
                               LPM.BP2.VOil    , LPM.BP2.Alcohol ,
                               LPM.BP2.BCereal ,  LPM.BP2.Pastries))
 
-write.csv(boot, file = "Bootstrap_Results_05_31_19.csv")
+write.csv(boot, file = "Bootstrap_Results_06_01_19.csv")
 
 # Generating the Efron Intervals ####
 
 # Did Progresa increase women's bargaining power? 
-critical.pivot.high <- 0.240468 - ( 0.003846 * quantile(boot_t,probs=c(0.975)))
+critical.pivot.high <- 0.240468 - ( 0.003846 * quantile(boot_t,probs=c(0.975))) have to update the numbers here
 critical.pivot.low <- 0.240468 + ( 0.003846 * quantile(boot_t,probs=c(0.025)))
 critical.pivot.high   # Yes, we reject at the 95% level the null that it did not. 
 critical.pivot.low 
