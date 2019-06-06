@@ -273,17 +273,15 @@ BP.Fun <- function(){ #Calls shadow wage function
 LPM_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   # print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP  + hh_log_wages + hh_kids + hh_young_kids + 
                chicken.price_hybrid +
                beef.price_hybrid + pork.price_hybrid +   
                lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
                milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid |folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T),
-              2*p1$coefficients[2], 
-              p1$coefficients[3], 
-              p1$coefficients[4]))
+  return(list(p1$coefficients[1],
+              p1$coefficients[2]))
   
 }
 
@@ -291,7 +289,7 @@ LPM_ME_Fun_animal <- function(food_name){
 # (D) Poisson Model
 Poisson_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages +  hh_kids + hh_young_kids + wave2 + wave3 +
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + hh_log_wages +  hh_kids + hh_young_kids + wave2 + wave3 +
                    chicken.price_hybrid +
                    beef.price_hybrid + pork.price_hybrid +   
                    lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
@@ -301,24 +299,29 @@ Poisson_ME_Fun_animal <- function(food_name){
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
   colnames(temp) <- c("folio", "frail")
-  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids", "wave2", "wave3",
                                         "chicken.price_hybrid" ,
                                         "beef.price_hybrid" , "pork.price_hybrid" ,    
                                         "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
                                         "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 
-                2*p1$coefficients[2]*model.mat$BP) * 
-               exp(model.mat$frail + as.matrix(model.mat[,c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wave2",  "wave3", 
-                                                            "chicken.price_hybrid" ,
-                                                            "beef.price_hybrid" , "pork.price_hybrid" ,    
-                                                            "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
-                                                            "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")]) %*% 
-                     as.numeric(p1$coefficients)), na.rm = T)
+  ME <- mean(p1$coefficients[1] * exp(
+    model.mat$frail + 
+      as.matrix(model.mat[,c("BP", "hh_log_wages",  "hh_kids", "hh_young_kids", "wave2",  "wave3", 
+                             "chicken.price_hybrid" ,
+                             "beef.price_hybrid" , "pork.price_hybrid" ,    
+                             "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
+                             "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")]) %*% 
+      as.numeric(p1$coefficients)), na.rm = T)
   
-  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
-  
+  Cross_Partial <- mean(ME*(p1$coefficients[1]*(
+    (mean(final.df.subset$Mom_SW_combined, na.rm = T) + 
+       mean(final.df.subset$T_mom_total, na.rm=T)) - 
+      (mean(final.df.subset$Dad_SW_combined, na.rm= T) + 
+         mean(final.df.subset$T_dad_total, na.rm = T)) + 
+      p1$coefficients[2])), na.rm=T) 
+
   return(list(ME, Cross_Partial)) }
 
 
@@ -327,18 +330,21 @@ Poisson_ME_Fun_animal <- function(food_name){
 LPM_ME_Fun_VF <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   # print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + 
                onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
                potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
                tomato.price_hybrid +  
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), #ME for BP
-              2*p1$coefficients[2], # second derivative of BP 
-              p1$coefficients[3], # 
-              p1$coefficients[4]
-  ))
+  return(list(p1$coefficients[1], #ME for BP
+              p1$coefficients[2]))
+  
+  # return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), #ME for BP
+  #             2*p1$coefficients[2], # second derivative of BP 
+  #             p1$coefficients[3], # 
+  #             p1$coefficients[4]
+  #))
   
 }
 
@@ -346,7 +352,7 @@ LPM_ME_Fun_VF <- function(food_name){
 # (D) Poisson Model
 Poisson_ME_Fun_VF <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wave2 + wave3 + 
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + wave2 + wave3 + 
                    onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
                    potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
                    tomato.price_hybrid +  
@@ -356,23 +362,29 @@ Poisson_ME_Fun_VF <- function(food_name){
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
   colnames(temp) <- c("folio", "frail")
-  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids", "wave2", "wave3",
                                         "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
                                         "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid" ,
                                         "tomato.price_hybrid" ,  
                                         "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
-                                                                              as.matrix(model.mat[,
-                                                                                                  c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
-                                                                                                    "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
-                                                                                                    "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid" ,
-                                                                                                    "tomato.price_hybrid" ,  
-                                                                                                    "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
-                                                                              as.numeric(p1$coefficients)), na.rm = T)
+  ME <- mean(p1$coefficients[1]*exp(
+    model.mat$frail + 
+      as.matrix(model.mat[,
+                          c("BP", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
+                            "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
+                            "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid" ,
+                            "tomato.price_hybrid" ,  
+                            "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
+      as.numeric(p1$coefficients)), na.rm = T)
   
-  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  Cross_Partial <- mean(ME*(p1$coefficients[1]*(
+    (mean(final.df.subset$Mom_SW_combined, na.rm = T) + 
+       mean(final.df.subset$T_mom_total, na.rm=T)) - 
+      (mean(final.df.subset$Dad_SW_combined, na.rm= T) + 
+         mean(final.df.subset$T_dad_total, na.rm = T)) + 
+      p1$coefficients[2])), na.rm=T)  
   
   return(list(ME, Cross_Partial)) }
 
@@ -389,10 +401,7 @@ LPM_ME_Fun_grains <- function(food_name){
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T),
-              2*p1$coefficients[2],
-              p1$coefficients[3], 
-              p1$coefficients[4]))
+  return(list(p1$coefficients[1], p1$coefficients[2]))
   
 }
 
@@ -400,7 +409,7 @@ LPM_ME_Fun_grains <- function(food_name){
 # (D) Poisson Model
 Poisson_ME_Fun_grains <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wave2 + wave3 +
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + wave2 + wave3 +
                    digestive.biscuit.price_hybrid +      
                    pan.blanco.price_hybrid + 
                    tortilla.price_hybrid + wheat.flour.price_hybrid + 
@@ -410,51 +419,52 @@ Poisson_ME_Fun_grains <- function(food_name){
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
   colnames(temp) <- c("folio", "frail")
-  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids", "wave2", "wave3",
                                         "digestive.biscuit.price_hybrid" ,      
                                         "pan.blanco.price_hybrid" , 
                                         "tortilla.price_hybrid" , "wheat.flour.price_hybrid" , 
                                         "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
-                                                                              as.matrix(model.mat[,
-                                         c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wave2", "wave3",   
-                                           "digestive.biscuit.price_hybrid" ,      
-                                           "pan.blanco.price_hybrid" , 
-                                           "tortilla.price_hybrid" , "wheat.flour.price_hybrid" , 
-                                           "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
-                     as.numeric(p1$coefficients)), na.rm = T)
+  ME <- mean(p1$coefficients[1]*exp(
+    model.mat$frail + 
+      as.matrix(model.mat[,
+                          c("BP", "hh_log_wages",  "hh_kids", "hh_young_kids", "wave2", "wave3",   
+                            "digestive.biscuit.price_hybrid" ,      
+                            "pan.blanco.price_hybrid" , 
+                            "tortilla.price_hybrid" , "wheat.flour.price_hybrid" , 
+                            "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
+      as.numeric(p1$coefficients)), na.rm = T)
   
-  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  Cross_Partial <- mean(ME*(p1$coefficients[1]*(
+    (mean(final.df.subset$Mom_SW_combined, na.rm = T) + 
+       mean(final.df.subset$T_mom_total, na.rm=T)) - 
+      (mean(final.df.subset$Dad_SW_combined, na.rm= T) + 
+         mean(final.df.subset$T_dad_total, na.rm = T)) + 
+      p1$coefficients[2])), na.rm=T)  
   
   return(list(ME, Cross_Partial)) }
-
-
 
 # OTHER 
 
 LPM_ME_Fun_misc <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   # print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + 
                sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
                veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), 
-              2*p1$coefficients[2],
-              p1$coefficients[3], 
-              p1$coefficients[4]))
+  return(list(p1$coefficients[1],
+              p1$coefficients[2]))
   
 }
-
 
 # (D) Poisson Model
 Poisson_ME_Fun_misc <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids +  wave2 + wave3 + 
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids +  wave2 + wave3 + 
                    sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
                    veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
                    rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
@@ -463,21 +473,26 @@ Poisson_ME_Fun_misc <- function(food_name){
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
   colnames(temp) <- c("folio", "frail")
-  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids",  "wave2", "wave3",
                                         "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
                                         "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , "breakfast.cereal.price_hybrid" , 
                                         "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
+  ME <- mean(p1$coefficients[1] * exp(model.mat$frail + 
       as.matrix(model.mat[,
-                          c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
+                          c("BP", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
                             "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
                             "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , # "breakfast.cereal.price_hybrid" , 
                             "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid" )]) %*% 
       as.numeric(p1$coefficients)), na.rm = T)
   
-  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  Cross_Partial <- mean(ME*(p1$coefficients[1]*(
+    (mean(final.df.subset$Mom_SW_combined, na.rm = T) + 
+       mean(final.df.subset$T_mom_total, na.rm=T)) - 
+      (mean(final.df.subset$Dad_SW_combined, na.rm= T) + 
+         mean(final.df.subset$T_dad_total, na.rm = T)) + 
+      p1$coefficients[2])), na.rm=T)   
   
   return(list(ME, Cross_Partial)) }
 
@@ -498,6 +513,7 @@ final.df <-
                                  c("folio", "wavenumber", "loc_id", "hh_log_wages" , "hh_kids" , 
                                    "hh_young_kids" , "seven_states",
                                    "wave2", "wave3", 
+                                   "Mom_SW_combined"  , "T_mom_total" , "Dad_SW_combined" , "T_dad_total",
                                    # Staples
                                    "rice.price_hybrid", "bean.price_hybrid", "egg.price_hybrid", 
                                    "milk.price_hybrid", 
@@ -993,7 +1009,8 @@ t$`Men std.2` <- as.numeric(as.character(t$`Men std.2`))
 stargazer::stargazer(t, summary = FALSE, omit = c("as.factor(year_wave_FE)"))
 
 # Chapter 5: Generating Figure 1: a graph of BP over time for the treatment and control groups #####
- 
+
+# Base R Plot.  
 par(mfrow=c(3,1))
 #hist(final.df$BP[final.df$wavenumber == 1], col = rgb(1,1,1), main = "1997", xlab = "Bargaining Power", 
 #     breaks = 100, xlim = c(0.15,0.5), freq=FALSE, ylab = "Percent of Households")
@@ -1021,6 +1038,104 @@ par(new = T)
 hist(final.df$BP[final.df$wavenumber == 3 & final.df$progresa_income_total > 0], 
      col = rgb(0,0,0, 0.25, 0.25), 
      breaks = 35, xlim = c(0,1), ylim = c(0, 5), freq=FALSE,  axes = F, xlab =NA, ylab=NA, main = NA)
+
+# Tidyverse Plot
+library(cowplot)
+library(grid)
+library(gridExtra)
+library(scales)
+
+
+final.df$Treatment <- as.factor(final.df$treatment_household)
+levels(final.df$Treatment) <- c("Not Treated", "Treated")
+
+
+panel_1A <- ggplot(filter(final.df, wavenumber == 1)) + 
+  geom_histogram(mapping = aes(x = BP, y = ..density..,
+                               fill = Treatment, 
+                               group = Treatment), 
+                 bins = 15, position="identity", alpha = 0.75) + 
+  ylim(c(0,4)) +
+  geom_density(mapping = aes(x = BP, y = ..density.., 
+                               #fill = Treatment,
+                               group = Treatment), size = 0.75, adjust = 2) + 
+  labs(title = "1997", y = "% of Households", x = "Bargaining Power") + 
+  theme(axis.ticks = element_blank(),
+        # axis.text.y = element_blank(),
+        #axis.title.y = element_blank(), 
+        # axis.title.x = element_blank(), 
+        legend.position = c(0.7, 0.8))
+panel_1A                  
+
+# Confirm the difference, out of curiosity. 
+# I don't think this threatens the DiD approach below, it just makes the second set of 
+# Differences more salient in calculating LATE
+t.test(final.df$BP[final.df$treatment_household == 0 & final.df$wavenumber == 1],
+       final.df$BP[final.df$treatment_household == 1 & final.df$wavenumber == 1])
+
+final.df$Positive_Progresa <- 0
+final.df$Positive_Progresa[final.df$progresa_income_total > 0] <- 1
+
+final.df$Positive_Progresa <- as.factor(final.df$Positive_Progresa)
+
+panel_2A <- ggplot(filter(final.df, wavenumber == 2)) + 
+  geom_histogram(mapping = aes(x = BP, y = ..density.., 
+                               fill = Positive_Progresa), 
+                 bins = 15, position="identity",
+                 alpha = 0.75) + 
+  ylim(c(0,4)) +
+  geom_density(mapping = aes(x = BP, y = ..density..,
+                              group = Positive_Progresa),
+               position="identity", adjust = 2, size = 0.75) + 
+  labs(title = "1999", y = "% of Households", x = "Bargaining Power") + 
+  theme(axis.ticks = element_blank(), 
+        # axis.text.y = element_blank(),
+        #axis.title.y = element_blank(), 
+        # axis.title.x = element_blank(), 
+        legend.position = "none") 
+panel_2A                  
+
+panel_3A <- ggplot(filter(final.df, wavenumber == 3)) + 
+  geom_histogram(mapping = aes(x = BP, y = ..density..,
+                               fill = Positive_Progresa), 
+                 bins = 15,  position="identity", alpha = 0.75) + 
+  ylim(c(0,4)) +
+  geom_density(mapping = aes(x = BP, y = ..density.., 
+                            # color = Positive_Progresa,
+                             group = Positive_Progresa), adjust = 2, size = 0.75) + 
+  labs(title = "2000", y = "% of Households", x = "Bargaining Power") + 
+  theme(axis.ticks = element_blank(), 
+       # title.position = c(1, 0.5),
+        # axis.text.y = element_blank(),
+        #axis.title.y = element_blank(), 
+        # axis.title.x = element_blank(), 
+        legend.position = "none")  
+panel_3A                  
+
+
+p_A <- cowplot::plot_grid(panel_1A, panel_2A, panel_3A, 
+                        align = "v", #     labels = c("H1", "H2", "H3", "H4"), 
+                        nrow=3)
+
+p_A
+
+p2 <- cowplot::plot_grid(panel_1, panel_2,  
+                         align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
+                         nrow=1)
+
+p3 <- cowplot::plot_grid(panel_3, panel_4,  
+                         align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
+                         nrow=1)
+p3
+
+#create common x label
+x.grob <- textGrob("Point Estimates and Confidence Intervals", 
+                   gp=gpar(fontface="bold", col="black", fontsize=15))
+title.grob <- textGrob("Power and Diet", 
+                       gp=gpar(fontface="bold", col="black", fontsize=24))
+
+
+grid.arrange(arrangeGrob(p, bottom = x.grob, top = title.grob))
 
 
 # Chapter 6: Generating the Chicken + Milk Table ####
@@ -1294,10 +1409,10 @@ results.df
 
 # Chapter 8: Constructing the Results Figures #### 
 boots_1 <- read.csv("Bootstrap_Results_05_31_19.csv")
-boots_1 <- read.csv("Bootstrap_Results_05_31_19.csv")
+boots_2 <- read.csv("Bootstrap_Results_06_01_19.csv")
 #boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results1000_03_07_19.csv")
 #boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_07_19.csv") 
-#boots <- bind_rows(boots1, boots2)
+boots <- bind_rows(boots_1, boots_2)
 
 boots.lpm <- boots[,c("LPM.Marginal.Chicken", "LPM.Marginal.BeefPork", "LPM.Marginal.Eggs" ,  "LPM.Marginal.Milk" ,
                       "LPM.Marginal.Fish" ,  "LPM.Marginal.Tuna" , "LPM.Marginal.Lard"  , 
@@ -1370,8 +1485,8 @@ results.df$lpm.high <-c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(
 results.df$poi.low <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.05))))
 results.df$poi.high <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.95))))
 
-results.df$sq.low <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(x) quantile(x, 0.05))))
-results.df$sq.high <- c(as.numeric(map(.x = boots.BP2[501:1000,], .f = function(x) quantile(x, 0.95))))
+results.df$sq.low <- c(as.numeric(map(.x = boots.BP2, .f = function(x) quantile(x, 0.05))))
+results.df$sq.high <- c(as.numeric(map(.x = boots.BP2, .f = function(x) quantile(x, 0.95))))
 
 results.df$c.low <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.05))))
 results.df$c.high <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.95))))
@@ -1439,10 +1554,6 @@ results.df[c(25:31),] <- results.df[c(27, 28, 26, 31, 30, 25, 29),] # reorder to
 
 results.df <- results.df[c(31:25, 24:17, 16:8, 7:1),]
 
-library(cowplot)
-library(grid)
-library(gridExtra)
-
 results.df$Significant <- ifelse(results.df$lpm.low > 0, 1, 0)
 results.df$Significant <- factor(ifelse(results.df$lpm.high < 0, 1, 
                                         results.df$Significant))
@@ -1485,19 +1596,11 @@ panel_2 <- ggplot(data = results.df) +
                               color = Significant)) + 
   scale_x_discrete(limits = results.df$Names,
                    labels = results.df$Names) +
-    # scale_x_discrete(limits = results.df$Names,
-  #                  labels = c("A1", "A2", "A3", 
-  #                             "A4", "A5", "A6", 
-  #                             "A7", "FV1", "FV2",
-  #                             "FV3", "FV4", "FV5", "FV6", "FV7", 
-  #                             "FV8", "FV9",
-  #                             "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", 
-  #                             "O1", "O2", "O3", "O4", "O5", "O6", "O7")) +
   geom_hline(yintercept=0, linetype = "dashed") +
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(#axis.text.y = element_blank(), 
+  theme(axis.text.y = element_blank(), 
         axis.title.y = element_blank(),
         axis.title.x = element_blank(),
         axis.ticks = element_blank(),
@@ -1525,7 +1628,7 @@ panel_3 <- ggplot(data = results.df) +
   geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
   theme(axis.ticks = element_blank(), 
-    #    axis.text.y = element_blank(),
+        axis.text.y = element_blank(),
         axis.title.y = element_blank(), 
         axis.title.x = element_blank(), 
         legend.position = "none") +
@@ -1549,7 +1652,7 @@ panel_4 <- ggplot(data = results.df) + geom_point(mapping = aes(x = Names, y = C
   geom_vline(xintercept=7.5, linetype = "dashed") +
   geom_vline(xintercept=15.5, linetype = "dashed") +
   geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(#axis.text.y = element_blank(), # element_text(color="navy", size=12, angle=90), 
+  theme(axis.text.y = element_blank(), # element_text(color="navy", size=12, angle=90), 
         axis.title.y = element_blank(),
         axis.title.x = element_blank(),
          axis.ticks = element_blank()) + 
@@ -1702,25 +1805,25 @@ unname(t.test( # Chicken
 unname(t.test( # Chicken
   x = final.df[,food_var_names[22]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
   y = final.df[,food_var_names[22]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat)),
-'RHS' = c(lVF.tomato*DiD*100, 
-          0, # onion
-          lVF.potato*DiD*100,
+'RHS' = c(0, # tomato 
+          lVF.onion*DiD*100, # onion
+          0, # potato
           lVF.orange*DiD*100,
           lVF.banana*DiD*100,
           lVF.apples*DiD*100,
-          0, # Limes
-          0, # tortilla, 
+          lVF.limes*DiD*100, # Limes
+          lG.Tortillas*DiD*100, # tortilla, 
           0, #Corn Flour, 
-          lG.Wbread*DiD*100,
+          0, # W Bread
           0, # Pan de Dulce,
-          0, # Wheat Flour, 
-          lM.CupN*DiD*100, 
+          lG.WFlour*DiD*100, # Wheat Flour, 
+          lM.CupN*DiD*100, # Cup nooldes (sopa.de.pasta) 
           0, #RICE
-          lG.biscuits*DiD*100, 
+          0, # Biscuits 
           la.chick*DiD*100, # Multiple by 100 so it's in Percent Terms
-          la.BPork *DiD*100,
-          0, # Beef or pork
-          la.eggs*DiD*100,
+          0, # Beef/Pork
+          0, # Tuna
+          0, # la.eggs*DiD*100,
           0, # Lard
           0, #soda
           0), # coffee
@@ -2148,8 +2251,6 @@ walk(c(1:17), Table_2_non_market_fun, wavenum=3)
 
 
 # Chapter 11: Constructing Table 8 - the Point Estimates, Bonferroni Updates, and CIs #####
-
-
 
 results.df
 

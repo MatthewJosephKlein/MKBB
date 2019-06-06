@@ -268,19 +268,15 @@ BP.Fun <- function(){ #Calls shadow wage function
 LPM_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   # print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages +
-               hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP  + hh_log_wages + hh_kids + hh_young_kids + 
                chicken.price_hybrid +
                beef.price_hybrid + pork.price_hybrid +   
                lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
-               milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid |
-               folio + wavenumber | 0 | loc_id,
+               milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid |folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T),
-              2*p1$coefficients[2], 
-              p1$coefficients[3], 
-              p1$coefficients[4]))
+  return(list(p1$coefficients[1],
+              p1$coefficients[2]))
   
 }
 
@@ -288,8 +284,7 @@ LPM_ME_Fun_animal <- function(food_name){
 # (D) Poisson Model
 Poisson_ME_Fun_animal <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages +  hh_kids + hh_young_kids + 
-                   wave2 + wave3 +
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + hh_log_wages +  hh_kids + hh_young_kids + wave2 + wave3 +
                    chicken.price_hybrid +
                    beef.price_hybrid + pork.price_hybrid +   
                    lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
@@ -299,23 +294,28 @@ Poisson_ME_Fun_animal <- function(food_name){
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
   colnames(temp) <- c("folio", "frail")
-  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids", "wave2", "wave3",
                                         "chicken.price_hybrid" ,
                                         "beef.price_hybrid" , "pork.price_hybrid" ,    
                                         "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
                                         "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 
-                2*p1$coefficients[2]*model.mat$BP) * 
-               exp(model.mat$frail + as.matrix(model.mat[,c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wave2",  "wave3", 
-                                                          "chicken.price_hybrid" ,
-                                                          "beef.price_hybrid" , "pork.price_hybrid" ,    
-                                                          "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
-                                                          "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")]) %*% 
-                     as.numeric(p1$coefficients)), na.rm = T)
+  ME <- mean(p1$coefficients[1] * exp(
+    model.mat$frail + 
+      as.matrix(model.mat[,c("BP", "hh_log_wages",  "hh_kids", "hh_young_kids", "wave2",  "wave3", 
+                             "chicken.price_hybrid" ,
+                             "beef.price_hybrid" , "pork.price_hybrid" ,    
+                             "lard.price_hybrid" , "sardines.price_hybrid" , "tuna.price_hybrid" ,   
+                             "milk.price_hybrid" , "egg.price_hybrid" , "bean.price_hybrid" , "rice.price_hybrid")]) %*% 
+      as.numeric(p1$coefficients)), na.rm = T)
   
-  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  Cross_Partial <- mean(ME*(p1$coefficients[1]*(
+    (mean(final.df.subset$Mom_SW_combined, na.rm = T) + 
+       mean(final.df.subset$T_mom_total, na.rm=T)) - 
+      (mean(final.df.subset$Dad_SW_combined, na.rm= T) + 
+         mean(final.df.subset$T_dad_total, na.rm = T)) + 
+      p1$coefficients[2])), na.rm=T) 
   
   return(list(ME, Cross_Partial)) }
 
@@ -325,18 +325,21 @@ Poisson_ME_Fun_animal <- function(food_name){
 LPM_ME_Fun_VF <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   # print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + 
                onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
                potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
                tomato.price_hybrid +  
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), #ME for BP
-              2*p1$coefficients[2], # second derivative of BP 
-              p1$coefficients[3], # 
-              p1$coefficients[4]
-              ))
+  return(list(p1$coefficients[1], #ME for BP
+              p1$coefficients[2]))
+  
+  # return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), #ME for BP
+  #             2*p1$coefficients[2], # second derivative of BP 
+  #             p1$coefficients[3], # 
+  #             p1$coefficients[4]
+  #))
   
 }
 
@@ -344,7 +347,7 @@ LPM_ME_Fun_VF <- function(food_name){
 # (D) Poisson Model
 Poisson_ME_Fun_VF <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wave2 + wave3 + 
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + wave2 + wave3 + 
                    onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
                    potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
                    tomato.price_hybrid +  
@@ -354,23 +357,29 @@ Poisson_ME_Fun_VF <- function(food_name){
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
   colnames(temp) <- c("folio", "frail")
-  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids", "wave2", "wave3",
                                         "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
                                         "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid" ,
                                         "tomato.price_hybrid" ,  
                                         "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
-                                                                              as.matrix(model.mat[,
-                                                                              c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
-                                                                                "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
-                                                                                "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid" ,
-                                                                                "tomato.price_hybrid" ,  
-                                                                                "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
-                                                                              as.numeric(p1$coefficients)), na.rm = T)
+  ME <- mean(p1$coefficients[1]*exp(
+    model.mat$frail + 
+      as.matrix(model.mat[,
+                          c("BP", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
+                            "onion.price_hybrid" , "lime.price_hybrid" , "apple.price_hybrid" , "orange.price_hybrid" ,
+                            "potato.price_hybrid" , "banana.price_hybrid" , "leafy.green.price_hybrid" ,
+                            "tomato.price_hybrid" ,  
+                            "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
+      as.numeric(p1$coefficients)), na.rm = T)
   
-  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  Cross_Partial <- mean(ME*(p1$coefficients[1]*(
+    (mean(final.df.subset$Mom_SW_combined, na.rm = T) + 
+       mean(final.df.subset$T_mom_total, na.rm=T)) - 
+      (mean(final.df.subset$Dad_SW_combined, na.rm= T) + 
+         mean(final.df.subset$T_dad_total, na.rm = T)) + 
+      p1$coefficients[2])), na.rm=T)  
   
   return(list(ME, Cross_Partial)) }
 
@@ -387,18 +396,15 @@ LPM_ME_Fun_grains <- function(food_name){
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T),
-              2*p1$coefficients[2],
-              p1$coefficients[3], 
-              p1$coefficients[4]))
-
+  return(list(p1$coefficients[1], p1$coefficients[2]))
+  
 }
 
 
 # (D) Poisson Model
 Poisson_ME_Fun_grains <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids + wave2 + wave3 +
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + wave2 + wave3 +
                    digestive.biscuit.price_hybrid +      
                    pan.blanco.price_hybrid + 
                    tortilla.price_hybrid + wheat.flour.price_hybrid + 
@@ -408,74 +414,80 @@ Poisson_ME_Fun_grains <- function(food_name){
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
   colnames(temp) <- c("folio", "frail")
-  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids", "wave2", "wave3",
                                         "digestive.biscuit.price_hybrid" ,      
                                         "pan.blanco.price_hybrid" , 
                                         "tortilla.price_hybrid" , "wheat.flour.price_hybrid" , 
                                         "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
-                                                                              as.matrix(model.mat[,
-                                     c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids", "wave2", "wave3",   
-                                       "digestive.biscuit.price_hybrid" ,      
-                                       "pan.blanco.price_hybrid" , 
-                                       "tortilla.price_hybrid" , "wheat.flour.price_hybrid" , 
-                                       "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
-                                                                              as.numeric(p1$coefficients)), na.rm = T)
+  ME <- mean(p1$coefficients[1]*exp(
+    model.mat$frail + 
+      as.matrix(model.mat[,
+                          c("BP", "hh_log_wages",  "hh_kids", "hh_young_kids", "wave2", "wave3",   
+                            "digestive.biscuit.price_hybrid" ,      
+                            "pan.blanco.price_hybrid" , 
+                            "tortilla.price_hybrid" , "wheat.flour.price_hybrid" , 
+                            "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")]) %*% 
+      as.numeric(p1$coefficients)), na.rm = T)
   
-  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  Cross_Partial <- mean(ME*(p1$coefficients[1]*(
+    (mean(final.df.subset$Mom_SW_combined, na.rm = T) + 
+       mean(final.df.subset$T_mom_total, na.rm=T)) - 
+      (mean(final.df.subset$Dad_SW_combined, na.rm= T) + 
+         mean(final.df.subset$T_dad_total, na.rm = T)) + 
+      p1$coefficients[2])), na.rm=T)  
   
   return(list(ME, Cross_Partial)) }
-
-
 
 # OTHER 
 
 LPM_ME_Fun_misc <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   # print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + 
                sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
                veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
                rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid | folio + wavenumber | 0 | loc_id,
              data = final.df)
   
-  return(list(p1$coefficients[1] + 2*p1$coefficients[2]*mean(final.df$BP, na.rm = T), 
-              2*p1$coefficients[2],
-              p1$coefficients[3], 
-              p1$coefficients[4]))
+  return(list(p1$coefficients[1],
+              p1$coefficients[2]))
   
 }
-
 
 # (D) Poisson Model
 Poisson_ME_Fun_misc <- function(food_name){
   i <- which(colnames(final.df.subset) == food_name)
-  p1 <- glmmboot(final.df.subset[,i] ~ BP + BP2 + hh_log_wages + hh_kids + hh_young_kids +  wave2 + wave3 + 
+  p1 <- glmmboot(final.df.subset[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids +  wave2 + wave3 + 
                    sugar.price_hybrid + coffee.price_hybrid + soda.price_hybrid + 
                    veg.oil.price_hybrid + sopa.de.pasta.price_hybrid + # breakfast.cereal.price_hybrid + 
                    rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid, 
-                 cluster = factor(folio),
+                 cluster = folio,
                  data = final.df.subset, family = poisson)
   
   temp <- as.data.frame(cbind(unique(final.df.subset$folio), p1$frail), nrow = 2) 
   colnames(temp) <- c("folio", "frail")
-  model.mat <- merge(final.df.subset[,c("folio", "BP", "BP2", "hh_log_wages", "hh_kids", 
+  model.mat <- merge(final.df.subset[,c("folio", "BP", "hh_log_wages", "hh_kids", 
                                         "hh_young_kids",  "wave2", "wave3",
                                         "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
                                         "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , "breakfast.cereal.price_hybrid" , 
                                         "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid")], temp, by = c("folio"))
   
-  ME <- mean((p1$coefficients[1] + 2*p1$coefficients[2]*model.mat$BP) * exp(model.mat$frail + 
-                                                                              as.matrix(model.mat[,
-                                                                             c("BP", "BP2", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
-                                                                               "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
-                                                                               "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , # "breakfast.cereal.price_hybrid" , 
-                                                                               "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid" )]) %*% 
-                                                                              as.numeric(p1$coefficients)), na.rm = T)
+  ME <- mean(p1$coefficients[1] * exp(model.mat$frail + 
+                                        as.matrix(model.mat[,
+                                                            c("BP", "hh_log_wages",  "hh_kids", "hh_young_kids",  "wave2", "wave3",   
+                                                              "sugar.price_hybrid" , "coffee.price_hybrid" , "soda.price_hybrid" , 
+                                                              "veg.oil.price_hybrid" , "sopa.de.pasta.price_hybrid" , # "breakfast.cereal.price_hybrid" , 
+                                                              "rice.price_hybrid" , "milk.price_hybrid" , "bean.price_hybrid" , "egg.price_hybrid" )]) %*% 
+                                        as.numeric(p1$coefficients)), na.rm = T)
   
-  Cross_Partial <- ME*as.numeric(p1$coefficients[3]) 
+  Cross_Partial <- mean(ME*(p1$coefficients[1]*(
+    (mean(final.df.subset$Mom_SW_combined, na.rm = T) + 
+       mean(final.df.subset$T_mom_total, na.rm=T)) - 
+      (mean(final.df.subset$Dad_SW_combined, na.rm= T) + 
+         mean(final.df.subset$T_dad_total, na.rm = T)) + 
+      p1$coefficients[2])), na.rm=T)   
   
   return(list(ME, Cross_Partial)) }
 
@@ -571,6 +583,7 @@ while(j <= B) { #generating the bootstrap
                          c("folio", "wavenumber", "loc_id", "hh_log_wages" , "hh_kids" , 
                            "hh_young_kids" , "seven_states",
                            "wave2", "wave3", 
+                           "Mom_SW_combined"  , "T_mom_total" , "Dad_SW_combined" , "T_dad_total",
                            # Staples
                            "rice.price_hybrid", "bean.price_hybrid", "egg.price_hybrid", 
                             "milk.price_hybrid", 
@@ -638,11 +651,9 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_animal("pollo_num_times_consume")
   
   LPM.Marginal.Chicken[j] <- temp[[1]] # 1
-  LPM.BP2.Chicken[j] <- temp[[2]] # 2
+ # LPM.BP2.Chicken[j] <- temp[[2]] # 2
   RHS.Chicken[j] <- DiD[j]*temp[[1]]   # 3
-#  Income.ME.Chicken[j] <- temp[[3]]       # 6
-#  Info.ME.Chicken[j] <- temp[[4]]         # 7
-  
+
   Poisson.Marginal.Chicken[j] <- temp2[[1]] # 4
   Cross.Partial.Chicken[j] <- temp2[[2]]    # 5
   
@@ -652,7 +663,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_animal("carne.de.res.o.puerco_num_times_consume")
   
   LPM.Marginal.BeefPork[j] <- temp[[1]] # 1
-  LPM.BP2.BeefPork[j] <- temp[[2]] 
+ # LPM.BP2.BeefPork[j] <- temp[[2]] 
   RHS.BeefPork[j] <- DiD[j]*temp[[1]]   # 3
 #  Income.ME.BeefPork[j] <- temp[[3]]       # 6
 #  Info.ME.BeefPork[j] <- temp[[4]]         # 7
@@ -666,7 +677,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_animal("huevos_num_times_consume")
   
   LPM.Marginal.Eggs[j] <- temp[[1]] # 1
-  LPM.BP2.Eggs[j] <- temp[[2]] 
+  #LPM.BP2.Eggs[j] <- temp[[2]] 
   RHS.Eggs[j] <- DiD[j]*temp[[1]]   # 3
   #  Income.ME.Eggs[j] <- temp[[3]]       # 6
   #Info.ME.Eggs[j] <- temp[[4]]         # 7
@@ -680,7 +691,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_animal("leche_num_times_consume")
   
   LPM.Marginal.Milk[j] <- temp[[1]] # 1
-  LPM.BP2.Milk[j] <- temp[[2]] 
+  #LPM.BP2.Milk[j] <- temp[[2]] 
   RHS.Milk[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Milk[j] <- temp[[3]]       # 6
   # Info.ME.Milk[j] <- temp[[4]]         # 7
@@ -694,7 +705,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_animal("pescados.y.mariscos_num_times_consume")
   
   LPM.Marginal.Fish[j] <- temp[[1]] # 1
-  LPM.BP2.Fish[j] <- temp[[2]] 
+ # LPM.BP2.Fish[j] <- temp[[2]] 
   RHS.Fish[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Fish[j] <- temp[[3]]       # 6
   # Info.ME.Fish[j] <- temp[[4]]         # 7
@@ -708,7 +719,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_animal("sardinas.o.atun.en.lata_num_times_consume")
   
   LPM.Marginal.Tuna[j] <- temp[[1]] # 1
-  LPM.BP2.Tuna[j] <- temp[[2]] 
+ # LPM.BP2.Tuna[j] <- temp[[2]] 
   RHS.Tuna[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Tuna[j] <- temp[[3]]       # 6
   # Info.ME.Tuna[j] <- temp[[4]]         # 7
@@ -722,7 +733,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_animal("manteca.de.cerdo_num_times_consume")
   
   LPM.Marginal.Lard[j] <- temp[[1]] # 1
-  LPM.BP2.Lard[j] <- temp[[2]] 
+  #LPM.BP2.Lard[j] <- temp[[2]] 
   RHS.Lard[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Lard[j] <- temp[[3]]       # 6
   #  Info.ME.Lard[j] <- temp[[4]]         # 7
@@ -739,7 +750,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("cebolla_num_times_consume")
   
   LPM.Marginal.Onion[j] <- temp[[1]] # 1
-  LPM.BP2.Onion[j] <- temp[[2]] 
+ # LPM.BP2.Onion[j] <- temp[[2]] 
   RHS.Onion[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Onion[j] <- temp[[3]]       # 6
   #  Info.ME.Onion[j] <- temp[[4]]         # 7
@@ -753,7 +764,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("limones_num_times_consume")
   
   LPM.Marginal.Lime[j] <- temp[[1]] # 1
-  LPM.BP2.Lime[j] <- temp[[2]] 
+ # LPM.BP2.Lime[j] <- temp[[2]] 
   RHS.Lime[j] <- DiD[j]*temp[[1]]   # 3
   #Income.ME.Lime[j] <- temp[[3]]       # 6
   #Info.ME.Lime[j] <- temp[[4]]         # 7
@@ -767,7 +778,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("manzanas_num_times_consume")
   
   LPM.Marginal.Apple[j] <- temp[[1]] # 1
-  LPM.BP2.Apple[j] <- temp[[2]] 
+ # LPM.BP2.Apple[j] <- temp[[2]] 
   RHS.Apple[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Apple[j] <- temp[[3]]       # 6
   # Info.ME.Apple[j] <- temp[[4]]         # 7
@@ -781,7 +792,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("narajas_num_times_consume")
   
   LPM.Marginal.Orange[j] <- temp[[1]] # 1
-  LPM.BP2.Orange[j] <- temp[[2]] 
+ # LPM.BP2.Orange[j] <- temp[[2]] 
   RHS.Orange[j] <- DiD[j]*temp[[1]]   # 3
   #Income.ME.Orange[j] <- temp[[3]]       # 6
   # Info.ME.Orange[j] <- temp[[4]]         # 7
@@ -795,7 +806,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("papa_num_times_consume")
   
   LPM.Marginal.Potato[j] <- temp[[1]] # 1
-  LPM.BP2.Potato[j] <- temp[[2]] 
+ # LPM.BP2.Potato[j] <- temp[[2]] 
   RHS.Potato[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Potato[j] <- temp[[3]]       # 6
   # Info.ME.Potato[j] <- temp[[4]]         # 7
@@ -809,7 +820,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("platanos_num_times_consume")
   
   LPM.Marginal.Banana[j] <- temp[[1]] # 1
-  LPM.BP2.Banana[j] <- temp[[2]] 
+#  LPM.BP2.Banana[j] <- temp[[2]] 
   RHS.Banana[j] <- DiD[j]*temp[[1]]   # 3
   #Income.ME.Banana[j] <- temp[[3]]       # 6
   # Info.ME.Banana[j] <- temp[[4]]         # 7
@@ -823,7 +834,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("verdudas.de.hoja_num_times_consume")
   
   LPM.Marginal.Greens[j] <- temp[[1]] # 1
-  LPM.BP2.Greens[j] <- temp[[2]] 
+#  LPM.BP2.Greens[j] <- temp[[2]] 
   RHS.Greens[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Greens[j] <- temp[[3]]       # 6
   #  Info.ME.Greens[j] <- temp[[4]]         # 7
@@ -837,7 +848,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("zanahorias_num_times_consume")
   
   LPM.Marginal.Carrots[j] <- temp[[1]] # 1
-  LPM.BP2.Carrots[j] <- temp[[2]] 
+ # LPM.BP2.Carrots[j] <- temp[[2]] 
   RHS.Carrots[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Carrots[j] <- temp[[3]]       # 6
   # Info.ME.Carrots[j] <- temp[[4]]         # 7
@@ -851,7 +862,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("tomate.rojo_num_times_consume")
   
   LPM.Marginal.Tomato[j] <- temp[[1]] # 1
-  LPM.BP2.Tomato[j] <- temp[[2]] 
+ # LPM.BP2.Tomato[j] <- temp[[2]] 
   RHS.Tomato[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Tomato[j] <- temp[[3]]       # 6
   # Info.ME.Tomato[j] <- temp[[4]]         # 7
@@ -867,7 +878,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("arroz_num_times_consume")
   
   LPM.Marginal.Rice[j] <- temp[[1]] # 1
-  LPM.BP2.Rice[j] <- temp[[2]] 
+ # LPM.BP2.Rice[j] <- temp[[2]] 
   RHS.Rice[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Rice[j] <- temp[[3]]       # 6
   # Info.ME.Rice[j] <- temp[[4]]         # 7
@@ -881,7 +892,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("frijol_num_times_consume")
   
   LPM.Marginal.Beans[j] <- temp[[1]] # 1
-  LPM.BP2.Beans[j] <- temp[[2]] 
+ # LPM.BP2.Beans[j] <- temp[[2]] 
   RHS.Beans[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Beans[j] <- temp[[3]]       # 6
   # Info.ME.Beans[j] <- temp[[4]]         # 7
@@ -895,7 +906,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("galletas_num_times_consume")
   
   LPM.Marginal.Biscuits[j] <- temp[[1]] # 1
-  LPM.BP2.Biscuits[j] <- temp[[2]] 
+ # LPM.BP2.Biscuits[j] <- temp[[2]] 
   RHS.Biscuits[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Biscuits[j] <- temp[[3]]       # 6
   # Info.ME.Biscuits[j] <- temp[[4]]         # 7
@@ -909,7 +920,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("maiz.en.grano_num_times_consume")
   
   LPM.Marginal.CFlour[j] <- temp[[1]] # 1
-  LPM.BP2.CFlour[j] <- temp[[2]] 
+ # LPM.BP2.CFlour[j] <- temp[[2]] 
   RHS.CFlour[j] <- DiD[j]*temp[[1]]   # 3
   #  Income.ME.CFlour[j] <- temp[[3]]       # 6
   #  Info.ME.CFlour[j] <- temp[[4]]         # 7
@@ -923,7 +934,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("pan.blanco_num_times_consume")
   
   LPM.Marginal.WBread[j] <- temp[[1]] # 1
-  LPM.BP2.WBread[j] <- temp[[2]] 
+ # LPM.BP2.WBread[j] <- temp[[2]] 
   RHS.WBread[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.WBread[j] <- temp[[3]]       # 6
   # Info.ME.WBread[j] <- temp[[4]]         # 7
@@ -937,7 +948,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("pan.de.dulce_num_times_consume")
   
   LPM.Marginal.Pastries[j] <- temp[[1]] # 1
-  LPM.BP2.Pastries[j] <- temp[[2]] 
+ # LPM.BP2.Pastries[j] <- temp[[2]] 
   RHS.Pastries[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Pastries[j] <- temp[[3]]       # 6
   # Info.ME.Pastries[j] <- temp[[4]]         # 7
@@ -951,7 +962,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("tortialls.de.maiz_num_times_consume")
   
   LPM.Marginal.Tortillas[j] <- temp[[1]] # 1
-  LPM.BP2.Tortillas[j] <- temp[[2]] 
+  #LPM.BP2.Tortillas[j] <- temp[[2]] 
   RHS.Tortillas[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Tortillas[j] <- temp[[3]]       # 6
   # Info.ME.Tortillas[j] <- temp[[4]]         # 7
@@ -965,7 +976,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("harina.de.trigo_num_times_consume")
   
   LPM.Marginal.WFlour[j] <- temp[[1]] # 1
-  LPM.BP2.WFlour[j] <- temp[[2]] 
+  #LPM.BP2.WFlour[j] <- temp[[2]] 
   RHS.WFlour[j] <- DiD[j]*temp[[1]]   # 3
   # Income.ME.Tortillas[j] <- temp[[3]]       # 6
   # Info.ME.Tortillas[j] <- temp[[4]]         # 7
@@ -981,7 +992,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("azucar_num_times_consume")
   
   LPM.Marginal.Sugar[j] <- temp[[1]] # 1
-  LPM.BP2.Sugar[j] <- temp[[2]] 
+  #LPM.BP2.Sugar[j] <- temp[[2]] 
   RHS.Sugar[j] <- DiD[j]*temp[[1]]   # 3
   Poisson.Marginal.Sugar[j] <- temp2[[1]] # 4
   Cross.Partial.Sugar[j] <- temp2[[2]]    # 5
@@ -992,7 +1003,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("cafe_num_times_consume")
   
   LPM.Marginal.Coffee[j] <- temp[[1]] # 1
-  LPM.BP2.Coffee[j] <- temp[[2]] 
+  #LPM.BP2.Coffee[j] <- temp[[2]] 
   RHS.Coffee[j] <- DiD[j]*temp[[1]]   # 3
   Poisson.Marginal.Coffee[j] <- temp2[[1]] # 4
   Cross.Partial.Coffee[j] <- temp2[[2]]    # 5
@@ -1003,7 +1014,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("refrescos_num_times_consume")
   
   LPM.Marginal.Soda[j] <- temp[[1]] # 1
-  LPM.BP2.Soda[j] <- temp[[2]] 
+ # LPM.BP2.Soda[j] <- temp[[2]] 
   RHS.Soda[j] <- DiD[j]*temp[[1]]   # 3
   Poisson.Marginal.Soda[j] <- temp2[[1]] # 4
   Cross.Partial.Soda[j] <- temp2[[2]]    # 5
@@ -1015,7 +1026,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("sopa.de.pasta_num_times_consume")
   
   LPM.Marginal.CNoodles[j] <- temp[[1]] # 1
-  LPM.BP2.CNoodles[j] <- temp[[2]] 
+  #LPM.BP2.CNoodles[j] <- temp[[2]] 
   RHS.CNoodles[j] <- DiD[j]*temp[[1]]   # 3
   Poisson.Marginal.CNoodles[j] <- temp2[[1]] # 4
   Cross.Partial.CNoodles[j] <- temp2[[2]]    # 5
@@ -1026,7 +1037,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("aciete.vegetal_num_times_consume")
   
   LPM.Marginal.VOil[j] <- temp[[1]] # 1
-  LPM.BP2.VOil[j] <- temp[[2]] 
+ # LPM.BP2.VOil[j] <- temp[[2]] 
   RHS.VOil[j] <- DiD[j]*temp[[1]]   # 3
   Poisson.Marginal.VOil[j] <- temp2[[1]] # 4
   Cross.Partial.VOil[j] <- temp2[[2]]    # 5
@@ -1037,7 +1048,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("bebidas.alcoholicas_num_times_consume")
   
   LPM.Marginal.Alcohol[j] <- temp[[1]] # 1
-  LPM.BP2.Alcohol[j] <- temp[[2]] 
+#  LPM.BP2.Alcohol[j] <- temp[[2]] 
   RHS.Alcohol[j] <- DiD[j]*temp[[1]]   # 3
   Poisson.Marginal.Alcohol[j] <- temp2[[1]] # 4
   Cross.Partial.Alcohol[j] <- temp2[[2]]    # 5
@@ -1049,7 +1060,7 @@ while(j <= B) { #generating the bootstrap
   temp2 <- Poisson_ME_Fun_VF("cereales.de.caja_num_times_consume")
   
   LPM.Marginal.BCereal[j] <- temp[[1]] # 1
-  LPM.BP2.BCereal[j] <- temp[[2]] 
+ # LPM.BP2.BCereal[j] <- temp[[2]] 
   RHS.BCereal[j] <- DiD[j]*temp[[1]]   # 3
   Poisson.Marginal.BCereal[j] <- temp2[[1]] # 4
   Cross.Partial.BCereal[j] <- temp2[[2]]    # 5
@@ -1097,27 +1108,27 @@ boot <- as.data.frame(cbind(mean_BP_97, mean_BP_99, mean_BP_00, boot_t,  DiD, # 
                               LPM.Marginal.VOil    , RHS.VOil  ,     Poisson.Marginal.VOil , Cross.Partial.VOil , 
                               LPM.Marginal.Alcohol ,  RHS.Alcohol  , Poisson.Marginal.Alcohol , Cross.Partial.Alcohol , 
                               LPM.Marginal.Pastries , RHS.Pastries , Poisson.Marginal.Pastries , Cross.Partial.Pastries, 
-                              LPM.Marginal.BCereal , RHS.BCereal  ,  Poisson.Marginal.BCereal , Cross.Partial.BCereal, 
+                              LPM.Marginal.BCereal , RHS.BCereal  ,  Poisson.Marginal.BCereal , Cross.Partial.BCereal)) 
                             # Saving the BP2 Results. Added 03/05/2019
-                              LPM.BP2.Lard    , LPM.BP2.Tuna  , LPM.BP2.Fish  , LPM.BP2.Milk  ,
-                              LPM.BP2.Eggs  , LPM.BP2.Chicken , LPM.BP2.BeefPork ,
-                              LPM.BP2.Tomato , LPM.BP2.Carrots, LPM.BP2.Greens , LPM.BP2.Banana , 
-                              LPM.BP2.Potato , 
-                              LPM.BP2.Orange , LPM.BP2.Apple  , LPM.BP2.Onion  , LPM.BP2.Lime  , 
-                              LPM.BP2.WFlour   , LPM.BP2.CFlour   , LPM.BP2.Rice     , LPM.BP2.Beans, 
-                              LPM.BP2.Biscuits , 
-                              LPM.BP2.WBread   , LPM.BP2.Tortillas,
-                              LPM.BP2.Sugar   , LPM.BP2.Coffee  , LPM.BP2.Soda    , LPM.BP2.CNoodles, 
-                              LPM.BP2.VOil    , LPM.BP2.Alcohol ,
-                              LPM.BP2.BCereal ,  LPM.BP2.Pastries))
+                              # LPM.BP2.Lard    , LPM.BP2.Tuna  , LPM.BP2.Fish  , LPM.BP2.Milk  ,
+                              # LPM.BP2.Eggs  , LPM.BP2.Chicken , LPM.BP2.BeefPork ,
+                              # LPM.BP2.Tomato , LPM.BP2.Carrots, LPM.BP2.Greens , LPM.BP2.Banana , 
+                              # LPM.BP2.Potato , 
+                              # LPM.BP2.Orange , LPM.BP2.Apple  , LPM.BP2.Onion  , LPM.BP2.Lime  , 
+                              # LPM.BP2.WFlour   , LPM.BP2.CFlour   , LPM.BP2.Rice     , LPM.BP2.Beans, 
+                              # LPM.BP2.Biscuits , 
+                              # LPM.BP2.WBread   , LPM.BP2.Tortillas,
+                              # LPM.BP2.Sugar   , LPM.BP2.Coffee  , LPM.BP2.Soda    , LPM.BP2.CNoodles, 
+                              # LPM.BP2.VOil    , LPM.BP2.Alcohol ,
+                              # LPM.BP2.BCereal ,  LPM.BP2.Pastries))
 
 write.csv(boot, file = "Bootstrap_Results_06_01_19.csv")
 
 # Generating the Efron Intervals ####
 
 # Did Progresa increase women's bargaining power? 
-critical.pivot.high <- 0.240468 - ( 0.003846 * quantile(boot_t,probs=c(0.975))) have to update the numbers here
-critical.pivot.low <- 0.240468 + ( 0.003846 * quantile(boot_t,probs=c(0.025)))
+critical.pivot.high <- 0.228578 - ( 0.005154 * quantile(boot_t,probs=c(0.975))) 
+critical.pivot.low <- 0.228578 + ( 0.005154 * quantile(boot_t,probs=c(0.025)))
 critical.pivot.high   # Yes, we reject at the 95% level the null that it did not. 
 critical.pivot.low 
 
