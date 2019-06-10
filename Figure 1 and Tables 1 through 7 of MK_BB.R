@@ -394,7 +394,7 @@ Poisson_ME_Fun_VF <- function(food_name){
 LPM_ME_Fun_grains <- function(food_name){
   i <- which(colnames(final.df) == food_name)
   #  print(i)
-  p1 <- felm(final.df[,i] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+  p1 <- felm(final.df[,i] ~ BP + hh_log_wages + hh_kids + hh_young_kids + 
                digestive.biscuit.price_hybrid +      
                pan.blanco.price_hybrid + 
                tortilla.price_hybrid + wheat.flour.price_hybrid + 
@@ -1119,15 +1119,6 @@ p_A <- cowplot::plot_grid(panel_1A, panel_2A, panel_3A,
 
 p_A
 
-p2 <- cowplot::plot_grid(panel_1, panel_2,  
-                         align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
-                         nrow=1)
-
-p3 <- cowplot::plot_grid(panel_3, panel_4,  
-                         align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
-                         nrow=1)
-p3
-
 #create common x label
 x.grob <- textGrob("Point Estimates and Confidence Intervals", 
                    gp=gpar(fontface="bold", col="black", fontsize=15))
@@ -1135,35 +1126,55 @@ title.grob <- textGrob("Power and Diet",
                        gp=gpar(fontface="bold", col="black", fontsize=24))
 
 
-grid.arrange(arrangeGrob(p, bottom = x.grob, top = title.grob))
+grid.arrange(arrangeGrob(p_A, bottom = x.grob, top = title.grob))
 
+summary(final.df$BP[final.df$wavenumber == 1])
 
 # Chapter 6: Generating the Chicken + Milk Table ####
 
-p1 <- summary(chick_LPM <- felm(pollo ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+p1 <- summary(Chick_LPM <- felm(pollo ~ BP +  hh_log_wages + hh_kids + hh_young_kids + 
                             chicken.price_hybrid +
                             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
                             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
                            # orange.price_hybrid + apple.price_hybrid + lime.price_hybrid +
                             milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid 
-                          | folio + wavenumber | 0 | loc_id,
+                          | folio + wavenumber | 0 | folio,
            data = final.df))
 
-p2 <- summary(milk_LPM <- felm(leche ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+p2 <- summary(Milk_LPM <- felm(huevos ~ BP  + hh_log_wages + hh_kids + hh_young_kids + 
                             chicken.price_hybrid +
                             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
                             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
                             # orange.price_hybrid + apple.price_hybrid + lime.price_hybrid +
                             milk.price_hybrid + egg.price_hybrid + bean.price_hybrid + rice.price_hybrid 
-                          | folio + wavenumber | 0 | loc_id,
+                          | folio + wavenumber | 0 | folio,
                           data = final.df))
 
+
+p3 <- summary(LG_LPM <- felm(verdudas.de.hoja ~ BP  + hh_log_wages + hh_kids + hh_young_kids + 
+                               onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
+                               potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
+                               tomato.price_hybrid +  
+                               rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid 
+                               | folio + wavenumber | 0 | folio,
+                               data = final.df))
+
+p4 <- summary(Banana_LPM <- felm(platanos ~ BP  + hh_log_wages + hh_kids + hh_young_kids + 
+                               onion.price_hybrid + lime.price_hybrid + apple.price_hybrid + orange.price_hybrid +
+                               potato.price_hybrid + banana.price_hybrid + leafy.green.price_hybrid +
+                               tomato.price_hybrid +  
+                               rice.price_hybrid + milk.price_hybrid + bean.price_hybrid + egg.price_hybrid 
+                             | folio + wavenumber | 0 | folio,
+                             data = final.df))
+
+
+stargazer::stargazer(Chick_LPM, Milk_LPM, LG_LPM, Banana_LPM, single.row = FALSE)
 
 keep.index <- with(final.df, { is.na(hh_log_wages) == FALSE & is.na(BP) == FALSE})
 final.df.subset <- final.df[keep.index, ]
 final.df.subset$BP2 <- final.df.subset$BP^2
 
-summary(chick_Poisson <- glmmboot(final.df.subset[,"pollo"] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids +
+summary(chick_Poisson <- glmmboot(final.df.subset[,"pollo_num_times_consume"] ~ BP + hh_log_wages + hh_kids + hh_young_kids +
                                     chicken.price_hybrid +
                                     lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
                                     beef.price_hybrid + pork.price_hybrid +   
@@ -1173,7 +1184,7 @@ summary(chick_Poisson <- glmmboot(final.df.subset[,"pollo"] ~ BP + I(BP^2) + hh_
                data = final.df.subset, family = poisson))
 
 
-summary(milk_Poisson <- glmmboot(final.df.subset[,"leche"] ~ BP + I(BP^2) + hh_log_wages + hh_kids + hh_young_kids + 
+summary(Milk_Poisson <- glmmboot(final.df.subset[,"leche_num_times_consume"] ~ BP + hh_log_wages + hh_kids + hh_young_kids + 
                                     chicken.price_hybrid +
                                     lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +   
                                     beef.price_hybrid + pork.price_hybrid +   
@@ -1184,23 +1195,23 @@ summary(milk_Poisson <- glmmboot(final.df.subset[,"leche"] ~ BP + I(BP^2) + hh_l
 
 # Should I use gather to make a single matrix with the coefs and se's from all four regressions? 
 
-coefs.df <- tibble(Names = c("$hat{mu}$", "$hat{mu}^{2}$", "HH Log Earnings",
+coefs.df <- tibble(Names = c("$hat{mu}$", "HH Log Earnings",
                                 "Num Kids", "Num Young Kids", "Chicken Price", 
                                 "Beef Price", "Pork Price", "Lard Price", "Sardine Price", "Tuna Price", 
                                 "Milk Price", "Egg Price", "Bean Price", "Rice Price"),
-                      Chicken.LPM = as.numeric(unname(chick_LPM$coefficients)[1:15,1]),
-                      Milk.LPM = as.numeric(unname(milk_LPM$coefficients)[1:15,1]),
-                      Chicken.Poi = as.numeric(chick_Poisson$coefficients[1:15]),
-                      Milk.Poi = as.numeric(milk_Poisson$coefficients[1:15]))
+                      Chicken.LPM = as.numeric(unname(chick_LPM$coefficients)[1:14,1]),
+                      Milk.LPM = as.numeric(unname(Milk_LPM$coefficients)[1:14,1]),
+                      Chicken.Poi = as.numeric(chick_Poisson$coefficients[1:14]),
+                      Milk.Poi = as.numeric(Milk_Poisson$coefficients[1:14]))
 
-se.df <- tibble(Names = paste0( c("$hat{mu}$", "$hat{mu}^{2}$", "HH Log Earnings",
+se.df <- tibble(Names = paste0( c("$hat{mu}$", "HH Log Earnings",
                                   "Num Kids", "Num Young Kids", "Chicken Price", 
                                   "Beef Price", "Pork Price", "Lard Price", "Sardine Price", "Tuna Price", 
                                   "Milk Price", "Egg Price", "Bean Price", "Rice Price"), "_se"), 
-                Chicken.LPM = unname(p1$coefficients[1:15,2]),
-                Milk.LPM = unname(p2$coefficients[1:15,2]),
-                Chicken.Poi = unname(chick_Poisson$sd[1:15]),
-                Milk.Poi = unname(milk_Poisson$sd[1:15]))
+                Chicken.LPM = unname(p1$coefficients[1:14,2]),
+                Milk.LPM = unname(p2$coefficients[1:14,2]),
+                Chicken.Poi = unname(chick_Poisson$sd[1:14]),
+                Milk.Poi = unname(Milk_Poisson$sd[1:14]))
 
 table_6 <- bind_rows(coefs.df, se.df)
 table_6[,2:5] <- round(table_6[,2:5], 3) 
@@ -1208,7 +1219,7 @@ table_6[,2:5] <- round(table_6[,2:5], 3)
 stargazer::stargazer(table_6, summary = FALSE, digits = 3)
 
 stargazer::stargazer(chick_LPM, milk_LPM, chick_LPM, milk_LPM, single.row=F, 
-                     covariate.labels = c("$hat{mu}$", "$hat{mu}^{2}$", "HH Log Earnings",
+                     covariate.labels = c("$hat{mu}$", "HH Log Earnings",
                                           "Num Kids", "Num Young Kids", "Chicken Price", 
                                           "Beef Price", "Pork Price", "Lard Price", "Sardine Price", "Tuna Price", 
                                           "Milk Price", "Egg Price", "Bean Price", "Rice Price"), 
@@ -1379,11 +1390,11 @@ results.df <- data.frame(
     lVF.tomato , lG.rice, lG.beans,   lG.biscuits, 
     lG.Cflour,   lG.Wbread,   lG.Pastries, lG.Tortillas, lG.WFlour,    lM.sugar  ,lM.coffee ,lM.soda  , 
     lM.CupN   ,lM.VOil   ,lM.Alcohol,lM.BCereal), 
-  c(la2.chick, la2.BPork,la2.eggs , la2.milk ,la2.fish , la2.tuna ,la2.lard ,
-    lVF2.onion  ,lVF2.limes  ,lVF2.apples ,lVF2.orange , lVF2.potato ,lVF2.banana ,lVF2.greens ,lVF2.carrot ,
-    lVF2.tomato , lG2.rice, lG2.beans,   lG2.biscuits, 
-    lG2.Cflour,   lG2.Wbread,   lG2.Pastries, lG2.Tortillas, lG2.WFlour,    lM2.sugar  ,lM2.coffee ,lM2.soda  , 
-    lM2.CupN   ,lM2.VOil   ,lM2.Alcohol,lM2.BCereal), 
+  # c(la2.chick, la2.BPork,la2.eggs , la2.milk ,la2.fish , la2.tuna ,la2.lard ,
+  #   lVF2.onion  ,lVF2.limes  ,lVF2.apples ,lVF2.orange , lVF2.potato ,lVF2.banana ,lVF2.greens ,lVF2.carrot ,
+  #   lVF2.tomato , lG2.rice, lG2.beans,   lG2.biscuits, 
+  #   lG2.Cflour,   lG2.Wbread,   lG2.Pastries, lG2.Tortillas, lG2.WFlour,    lM2.sugar  ,lM2.coffee ,lM2.soda  , 
+  #   lM2.CupN   ,lM2.VOil   ,lM2.Alcohol,lM2.BCereal), 
   c(pa.chick,     pa.BPork,     pa.eggs ,     pa.milk ,     pa.fish ,     pa.tuna ,     pa.lard ,     pVF.onion ,
     pVF.limes ,     pVF.apples ,     pVF.oranges,     pVF.potato ,     pVF.banana ,     pVF.greens ,     pVF.carrots, 
     pVF.tomato ,     pG.rice      ,     pG.beans     ,     pG.biscuits  ,     pG.Cflour    ,     pG.Wbread    ,   
@@ -1397,10 +1408,10 @@ results.df <- data.frame(
   )
    
 
-colnames(results.df) <- c("Names", "LPM", "Squared", "Poi", "Cross")
+colnames(results.df) <- c("Names", "LPM", "Poi", "Cross")
 
 results.df$LPM <- as.numeric(as.character(results.df$LPM))
-results.df$Squared <- as.numeric(as.character(results.df$Squared))
+#results.df$Squared <- as.numeric(as.character(results.df$Squared))
 results.df$Poi <- as.numeric(as.character(results.df$Poi))
 results.df$Cross <- as.numeric(as.character(results.df$Cross))
 
@@ -1408,11 +1419,11 @@ results.df <- as.tibble(results.df)
 results.df
 
 # Chapter 8: Constructing the Results Figures #### 
-boots_1 <- read.csv("Bootstrap_Results_05_31_19.csv")
-boots_2 <- read.csv("Bootstrap_Results_06_01_19.csv")
+boots <- read.csv("Bootstrap_Results_06_07_19.csv")
+# boots_2 <- read.csv("Bootstrap_Results_06_06_19.csv")
 #boots1 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results1000_03_07_19.csv")
 #boots2 <- read.csv("C:/Users/mjklein2/Desktop/toot/Programming_Directory/Bootstrap_Results_03_07_19.csv") 
-boots <- bind_rows(boots_1, boots_2)
+# boots <- bind_rows(boots_1, boots_2)
 
 boots.lpm <- boots[,c("LPM.Marginal.Chicken", "LPM.Marginal.BeefPork", "LPM.Marginal.Eggs" ,  "LPM.Marginal.Milk" ,
                       "LPM.Marginal.Fish" ,  "LPM.Marginal.Tuna" , "LPM.Marginal.Lard"  , 
@@ -1440,18 +1451,18 @@ boots.poisson <- boots[,c("Poisson.Marginal.Chicken", "Poisson.Marginal.BeefPork
                       "Poisson.Marginal.Sugar"  ,  "Poisson.Marginal.Coffee"  , "Poisson.Marginal.Soda",  "Poisson.Marginal.CNoodles" ,
                       "Poisson.Marginal.VOil"   ,  "Poisson.Marginal.Alcohol" ,   "Poisson.Marginal.BCereal"  )]
 
-boots.BP2 <- boots[,c("LPM.BP2.Chicken", "LPM.BP2.BeefPork", "LPM.BP2.Eggs" ,  "LPM.BP2.Milk" ,
-                          "LPM.BP2.Fish" ,  "LPM.BP2.Tuna" , "LPM.BP2.Lard"  , 
-                          # VegFruits  
-                          "LPM.BP2.Onion", "LPM.BP2.Lime", "LPM.BP2.Apple" ,"LPM.BP2.Orange"  ,
-                          "LPM.BP2.Potato" , "LPM.BP2.Banana", "LPM.BP2.Greens" , "LPM.BP2.Carrots" ,
-                          "LPM.BP2.Tomato"  ,
-                          # Grains
-                          "LPM.BP2.Rice"     , "LPM.BP2.Beans"  , "LPM.BP2.Biscuits", "LPM.BP2.CFlour"   ,  
-                          "LPM.BP2.WBread"   ,"LPM.BP2.Pastries", "LPM.BP2.Tortillas","LPM.BP2.WFlour"  ,
-                          # Other
-                          "LPM.BP2.Sugar"  ,  "LPM.BP2.Coffee"  , "LPM.BP2.Soda",  "LPM.BP2.CNoodles" ,
-                          "LPM.BP2.VOil"   ,  "LPM.BP2.Alcohol" ,   "LPM.BP2.BCereal"  )]
+# boots.BP2 <- boots[,c("LPM.BP2.Chicken", "LPM.BP2.BeefPork", "LPM.BP2.Eggs" ,  "LPM.BP2.Milk" ,
+#                           "LPM.BP2.Fish" ,  "LPM.BP2.Tuna" , "LPM.BP2.Lard"  , 
+#                           # VegFruits  
+#                           "LPM.BP2.Onion", "LPM.BP2.Lime", "LPM.BP2.Apple" ,"LPM.BP2.Orange"  ,
+#                           "LPM.BP2.Potato" , "LPM.BP2.Banana", "LPM.BP2.Greens" , "LPM.BP2.Carrots" ,
+#                           "LPM.BP2.Tomato"  ,
+#                           # Grains
+#                           "LPM.BP2.Rice"     , "LPM.BP2.Beans"  , "LPM.BP2.Biscuits", "LPM.BP2.CFlour"   ,  
+#                           "LPM.BP2.WBread"   ,"LPM.BP2.Pastries", "LPM.BP2.Tortillas","LPM.BP2.WFlour"  ,
+#                           # Other
+#                           "LPM.BP2.Sugar"  ,  "LPM.BP2.Coffee"  , "LPM.BP2.Soda",  "LPM.BP2.CNoodles" ,
+#                           "LPM.BP2.VOil"   ,  "LPM.BP2.Alcohol" ,   "LPM.BP2.BCereal"  )]
 
 boots.Cross <- boots[,c("Cross.Partial.Chicken", "Cross.Partial.BeefPork", "Cross.Partial.Eggs" ,  "Cross.Partial.Milk" ,
                           "Cross.Partial.Fish" ,  "Cross.Partial.Tuna" , "Cross.Partial.Lard"  , 
@@ -1479,50 +1490,48 @@ boots.RHS <- boots[,c("RHS.Chicken", "RHS.BeefPork", "RHS.Eggs" ,  "RHS.Milk" ,
                         "RHS.VOil"   ,  "RHS.Alcohol" ,   "RHS.BCereal"  )]
 
 
-results.df$lpm.low <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.05))))
-results.df$lpm.high <-c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.95))))
+results.df$lpm.low <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.025))))
+results.df$lpm.high <-c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.975))))
 
-results.df$poi.low <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.05))))
-results.df$poi.high <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.95))))
+results.df$poi.low <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.025))))
+results.df$poi.high <- c(as.numeric(map(.x = boots.poisson, .f = function(x) quantile(x, 0.975))))
 
-results.df$sq.low <- c(as.numeric(map(.x = boots.BP2, .f = function(x) quantile(x, 0.05))))
-results.df$sq.high <- c(as.numeric(map(.x = boots.BP2, .f = function(x) quantile(x, 0.95))))
+# results.df$sq.low <- c(as.numeric(map(.x = boots.BP2, .f = function(x) quantile(x, 0.05))))
+# results.df$sq.high <- c(as.numeric(map(.x = boots.BP2, .f = function(x) quantile(x, 0.95))))
 
-results.df$c.low <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.05))))
-results.df$c.high <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.95))))
+results.df$c.low <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.025))))
+results.df$c.high <- c(as.numeric(map(.x = boots.Cross, .f = function(x) quantile(x, 0.975))))
 
-results.df$rhs.low <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.05))))
-results.df$rhs.high <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.95))))
+results.df$rhs.low <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.01))))
+results.df$rhs.high <- c(as.numeric(map(.x = boots.RHS, .f = function(x) quantile(x, 0.99))))
 
 
 # Bonferonni
-table(results.df$lpm.low > 0) # Not - Corrected
-
-bon.lpm <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.025))))
-table(bon.lpm > 0)
-
-table(results.df$poi.low < 0) # Not - Corrected
-bon.poi <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.poisson[,x], 1499)}) # Corrected
-table(bon.poi > 0)
-
-table(results.df$sq.low > 0) # Not - Corrected
-bon.lpm <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.BP2[,x], 1499)}) # Corrected
-table(bon.lpm > 0)
-
-table(results.df$rhs.low > 0) # Not - Corrected
-bon.lpm <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.Cross[,x], 1499)}) # Corrected
-table(bon.lpm > 0)
-
-# Calculating the point at which nutritional attainment is maximized
-equality <- filter(results.df, Names %in% c("Chicken", "Beef/Pork", "Milk", "Eggs", "Potatoes", 
-                                            "Bananas", "Oranges", "Apples", "Grees", "Carrots", "Tomatoes",
-                                            "White Bread", "Biscuits", "Cup Noodles")) %>%
-            select(Names, LPM, Squared) %>%
-  mutate(sol = -(LPM /(Squared)))
-
-summary(equality$sol)
-
-
+# table(results.df$lpm.low > 0) # Not - Corrected
+# 
+# bon.lpm <- c(as.numeric(lapply(boots.lpm, FUN = function(x) quantile(x, 0.025))))
+# table(bon.lpm > 0)
+# 
+# table(results.df$poi.low < 0) # Not - Corrected
+# bon.poi <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.poisson[,x], 1499)}) # Corrected
+# table(bon.poi > 0)
+# 
+# # table(results.df$sq.low > 0) # Not - Corrected
+# # bon.lpm <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.BP2[,x], 1499)}) # Corrected
+# # table(bon.lpm > 0)
+# 
+# table(results.df$rhs.low > 0) # Not - Corrected
+# bon.lpm <- map_dbl(.x = c(1:31), .f = function(x){nth(boots.Cross[,x], 1499)}) # Corrected
+# table(bon.lpm > 0)
+# 
+## Calculating the point at which nutritional attainment is maximized
+# equality <- filter(results.df, Names %in% c("Chicken", "Beef/Pork", "Milk", "Eggs", "Potatoes", 
+#                                             "Bananas", "Oranges", "Apples", "Grees", "Carrots", "Tomatoes",
+#                                             "White Bread", "Biscuits", "Cup Noodles")) %>%
+#             select(Names, LPM, Squared) %>%
+#   mutate(sol = -(LPM /(Squared)))
+# 
+# summary(equality$sol)
 
 
 results.df <- results.df %>% 
@@ -1577,7 +1586,7 @@ panel_1 <- ggplot(data = results.df) +
       axis.title.y = element_blank(), 
      axis.title.x = element_blank(), 
      legend.position = "none") +
-  labs(title = "Marginal Effect of Empowerment on Diet", y = " ")  + 
+  labs(title = "Intensive Margin", y = " ")  + 
   coord_flip()
 
 panel_1
@@ -1603,49 +1612,49 @@ panel_2 <- ggplot(data = results.df) +
   theme(axis.text.y = element_blank(), 
         axis.title.y = element_blank(),
         axis.title.x = element_blank(),
-        axis.ticks = element_blank(),
-        legend.position = "none") + 
-  labs(title = "Count Data Model Results", 
+        axis.ticks = element_blank(), 
+        legend.position = c(0.85, 0.95)) +
+       # legend.position = "none" 
+  labs(title = "Extensive Margin", 
        y = "Point Estimate and CI")  + coord_flip()  
 
 panel_2
 
-results.df$Significant <- ifelse(results.df$sq.low > 0, 1, 0)
-results.df$Significant <- factor(ifelse(results.df$sq.high < 0, 1, 
-                                        results.df$Significant))
-levels(results.df$Significant) <- c("No", "Yes")
-
-panel_3 <- ggplot(data = results.df) +
-  geom_point(mapping = aes(x = Names, y = Squared)) + 
-  geom_errorbar(mapping = aes(x = Names,
-                              ymin = sq.low,
-                              ymax = sq.high, 
-                              color = Significant)) + 
-  scale_x_discrete(limits = results.df$Names,
-                   labels = results.df$Names) +
-  geom_hline(yintercept=0, linetype = "dashed") +
-  geom_vline(xintercept=7.5, linetype = "dashed") +
-  geom_vline(xintercept=15.5, linetype = "dashed") +
-  geom_vline(xintercept=24.5, linetype = "dashed") +
-  theme(axis.ticks = element_blank(), 
-        axis.text.y = element_blank(),
-        axis.title.y = element_blank(), 
-        axis.title.x = element_blank(), 
-        legend.position = "none") +
-  labs(title = "Second Derivative Results", y = " ")  + 
-  coord_flip()
-
-panel_3
-
+# results.df$Significant <- ifelse(results.df$sq.low > 0, 1, 0)
+# results.df$Significant <- factor(ifelse(results.df$sq.high < 0, 1, 
+#                                         results.df$Significant))
+# levels(results.df$Significant) <- c("No", "Yes")
+# 
+# panel_3 <- ggplot(data = results.df) +
+#   geom_point(mapping = aes(x = Names, y = Squared)) + 
+#   geom_errorbar(mapping = aes(x = Names,
+#                               ymin = sq.low,
+#                               ymax = sq.high, 
+#                               color = Significant)) + 
+#   scale_x_discrete(limits = results.df$Names,
+#                    labels = results.df$Names) +
+#   geom_hline(yintercept=0, linetype = "dashed") +
+#   geom_vline(xintercept=7.5, linetype = "dashed") +
+#   geom_vline(xintercept=15.5, linetype = "dashed") +
+#   geom_vline(xintercept=24.5, linetype = "dashed") +
+#   theme(axis.ticks = element_blank(), 
+#         axis.text.y = element_blank(),
+#         axis.title.y = element_blank(), 
+#         axis.title.x = element_blank(), 
+#         legend.position = "none") +
+#   labs(title = "Second Derivative Results", y = " ")  + 
+#   coord_flip()
+# 
+# panel_3
+# 
 
 results.df$Significant <- ifelse(results.df$c.low > 0, 1, 0)
 results.df$Significant <- factor(ifelse(results.df$c.high < 0, 1, 
                                         results.df$Significant))
-levels(results.df$Significant) <- c("No", "Yes")
+levels(results.df$Significant) <- c("Yes") # They are all significant, so only one level
 
 panel_4 <- ggplot(data = results.df) + geom_point(mapping = aes(x = Names, y = Cross)) + 
-  geom_errorbar(mapping = aes(x = Names, y = Cross, ymin=c.low, ymax=c.high, 
-                              color = Significant)) + 
+  geom_errorbar(mapping = aes(x = Names, y = Cross, ymin=c.low, ymax=c.high), color = "light Blue") + 
   scale_x_discrete(limits = results.df$Names,
                    labels = results.df$Names) +
   geom_hline(yintercept=0, linetype = "dashed") +
@@ -1663,13 +1672,17 @@ panel_4
 
 #cowplot::plot_grid(panel_1, panel_2, panel_4 ,labels = c("A", "C", "D"))
 
-p <- cowplot::plot_grid(panel_1, panel_2, panel_3, panel_4, 
-                   align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
-                   nrow=1)
+# p <- cowplot::plot_grid(panel_1, panel_2,  panel_4, 
+#                    align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
+#                    nrow=1)
+# 
+# p
 
 p2 <- cowplot::plot_grid(panel_1, panel_2,  
                         align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
                         nrow=1)
+
+p2
 
 p3 <- cowplot::plot_grid(panel_3, panel_4,  
                          align = "h", #     labels = c("H1", "H2", "H3", "H4"), 
@@ -1677,13 +1690,13 @@ p3 <- cowplot::plot_grid(panel_3, panel_4,
 p3
 
 #create common x label
-x.grob <- textGrob("Point Estimates and Confidence Intervals", 
+x.grob <- textGrob("Marginal Effect Estimates and Confidence Intervals", 
                    gp=gpar(fontface="bold", col="black", fontsize=15))
 title.grob <- textGrob("Power and Diet", 
                                  gp=gpar(fontface="bold", col="black", fontsize=24))
 
 
-grid.arrange(arrangeGrob(p, bottom = x.grob, top = title.grob))
+grid.arrange(arrangeGrob(p2, bottom = x.grob, top = title.grob))
 
 # Check that the right confidence intervals are paired with the right foods. 
 colnames(select(boots, starts_with("LPM")))
@@ -1805,13 +1818,13 @@ unname(t.test( # Chicken
 unname(t.test( # Chicken
   x = final.df[,food_var_names[22]][final.df$wavenumber == 2 & final.df$treatment_household == 1], 
   y = final.df[,food_var_names[22]][final.df$wavenumber == 2 & final.df$treatment_household == 0])$stat)),
-'RHS' = c(0, # tomato 
+'RHS' = c(lVF.tomato*DiD*100, # tomato 
           lVF.onion*DiD*100, # onion
           0, # potato
           lVF.orange*DiD*100,
           lVF.banana*DiD*100,
           lVF.apples*DiD*100,
-          lVF.limes*DiD*100, # Limes
+          0, # Limes
           lG.Tortillas*DiD*100, # tortilla, 
           0, #Corn Flour, 
           0, # W Bread
@@ -1821,12 +1834,12 @@ unname(t.test( # Chicken
           0, #RICE
           0, # Biscuits 
           la.chick*DiD*100, # Multiple by 100 so it's in Percent Terms
-          0, # Beef/Pork
+          la.BPork*DiD*100, # Beef/Pork
           0, # Tuna
           0, # la.eggs*DiD*100,
-          0, # Lard
-          0, #soda
-          0), # coffee
+          la.lard*DiD*100, # Lard
+          lM.soda*DiD*100, #soda
+          lM.coffee*DiD*100), # coffee
 '% Explained By Power'  = (RHS / Difference)*100)
 
 results.explain.df[,2:7] <- round(results.explain.df[,2:7], 3)
