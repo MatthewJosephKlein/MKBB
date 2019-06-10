@@ -54,6 +54,7 @@ hh.df$prop_mex_migrant_dummy <- ifelse(hh.df$prop_mex_migrant > 0 & !is.na(hh.df
 hh.df$otherincomeval_dummy <- ifelse(hh.df$otherincomeval > 0, 1, 0)
 
 
+
 # (A.1) Shadow Earnings (SE) Function 
 SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
   
@@ -199,36 +200,42 @@ BP.Fun <- function(){ #Calls shadow wage function
   # sample.analog <- sample.analog %>% group_by(wavenumber) %>%
   #    mutate()
   
-  sample.analog$BP[sample.analog$wave1 == 1] <- 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 1] )  / 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 1] +
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 1])
+  sample.analog$BP[sample.analog$wave1 == 1] <-
+    (1/2) + (1/2)*((
+      (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 1] + 
+         sample.analog$T_mom_total[sample.analog$wavenumber == 1]) - 
+        (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
+           sample.analog$T_dad_total[sample.analog$wavenumber == 1])) / 
+        (sample.analog$hh_wages[sample.analog$wavenumber == 1]))
   
-  sample.analog$BP[sample.analog$wavenumber == 2] <- 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 2])  /
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] +
-       sample.analog$T_mom_total[sample.analog$wavenumber == 2] + 
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 2])
+  sample.analog$BP[sample.analog$wavenumber == 2] <-
+    (1/2) + (1/2)*((
+      (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 2] + 
+         sample.analog$T_mom_total[sample.analog$wavenumber == 2]) - 
+        (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 2] + 
+           sample.analog$T_dad_total[sample.analog$wavenumber == 2])) / 
+        (sample.analog$hh_wages[sample.analog$wavenumber == 2]))
   
-  sample.analog$BP[sample.analog$wavenumber == 3] <- 
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] + 
-       sample.analog$T_mom_total[sample.analog$wavenumber == 3])  /
-    (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] +
-       sample.analog$T_mom_total[sample.analog$wavenumber == 3] + 
-       sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
-       sample.analog$T_dad_total[sample.analog$wavenumber == 3])
   
+  sample.analog$BP[sample.analog$wavenumber == 3] <-
+    (1/2) + (1/2)*((
+      (sample.analog$Mom_SW_combined[sample.analog$wavenumber == 3] + 
+         sample.analog$T_mom_total[sample.analog$wavenumber == 3]) - 
+        (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 3] + 
+           sample.analog$T_dad_total[sample.analog$wavenumber == 3])) / 
+        (sample.analog$hh_wages[sample.analog$wavenumber == 3]))
+  
+  # The Kuhn-tucker conditions don't allow for eta < 0 or eta > 1 (see [lambda_3] and [lambda_4] in Section 3)
+  sample.analog$BP[sample.analog$BP <= 0] <- 0  
+  sample.analog$BP[sample.analog$BP >= 1] <- 1
   
   return(list(sample.analog,  
               mean(sample.analog$BP[sample.analog$wave1 == 1], na.rm = T), 
               mean(sample.analog$BP[sample.analog$wave2 == 1], na.rm = T),
               mean(sample.analog$BP[sample.analog$wave3 == 1], na.rm = T)))  
 } 
+
+
 
 
 # Estimating BP for each HH in each period ####
@@ -296,6 +303,7 @@ final.df <-
                               "pobre", "pobextre")],
                    final.df, by =   c("folio", "wavenumber")))
 
+summary(final.df$BP[final.df$wavenumber == 1])
 
 # Chapter 2 - loading in the other decision making variables ####
 
