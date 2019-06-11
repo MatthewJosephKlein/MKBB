@@ -1141,7 +1141,7 @@ p1 <- summary(Chick_LPM <- felm(pollo ~ BP +  hh_log_wages + hh_kids + hh_young_
                           | folio + wavenumber | 0 | folio,
            data = final.df))
 
-p2 <- summary(Milk_LPM <- felm(huevos ~ BP  + hh_log_wages + hh_kids + hh_young_kids + 
+p2 <- summary(Milk_LPM <- felm(leche ~ BP  + hh_log_wages + hh_kids + hh_young_kids + 
                             chicken.price_hybrid +
                             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
                             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  

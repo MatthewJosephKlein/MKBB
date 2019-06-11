@@ -1127,8 +1127,8 @@ write.csv(boot, file = "Bootstrap_Results_06_01_19.csv")
 # Generating the Efron Intervals ####
 
 # Did Progresa increase women's bargaining power? 
-critical.pivot.high <- 0.228578 - ( 0.005154 * quantile(boot_t,probs=c(0.975))) 
-critical.pivot.low <- 0.228578 + ( 0.005154 * quantile(boot_t,probs=c(0.025)))
+critical.pivot.high <- 0.231273  - ( 0.003788  * quantile(boot_t,probs=c(0.975))) 
+critical.pivot.low <- 0.231273  + ( 0.003788  * quantile(boot_t,probs=c(0.025)))
 critical.pivot.high   # Yes, we reject at the 95% level the null that it did not. 
 critical.pivot.low 
 

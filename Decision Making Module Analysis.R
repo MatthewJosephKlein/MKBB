@@ -450,75 +450,74 @@ final.df$DM_count_M <- rowSums(cbind(final.df$DM_HH_fix_expenditures_M, final.df
                                      final.df$DM_decides_garden_M, final.df$DM_spend_women_income_M,  
                                      final.df$DM_who_tells_sick_kid_M), na.rm = T)
 
-summary(reg1 <-  lfe::felm(DM_buy_kids_shoes_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+summary(reg1 <-  lfe::felm(DM_buy_kids_shoes_T ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids  | unique_loc_id + wavenumber | 0 | 
                        unique_loc_id, data = final.df))
 
-summary(reg2 <-  lfe::felm(DM_tells_kid_school_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+summary(reg2 <-  lfe::felm(DM_tells_kid_school_T ~ BP  + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids | unique_loc_id + wavenumber | 0 | 
                        unique_loc_id, data = final.df))
 
-summary(reg3 <-  lfe::felm(DM_spend_women_income_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)| unique_loc_id + wavenumber | 0 | 
+summary(reg3 <-  lfe::felm(DM_spend_women_income_T ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids | unique_loc_id + wavenumber | 0 | 
+                             folio, data = final.df))
+
+summary(reg4 <-  lfe::felm(DM_who_tells_sick_kid_T ~ BP  + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids  | unique_loc_id + wavenumber | 0 | 
                              unique_loc_id, data = final.df))
 
-summary(reg4 <-  lfe::felm(DM_who_tells_sick_kid_T ~BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+summary(reg5 <-  lfe::felm(need_permission_dummy ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids   | unique_loc_id + wavenumber | 0 | 
                              unique_loc_id, data = final.df))
 
-summary(reg5 <-  lfe::felm(need_permission_dummy ~BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)  | unique_loc_id + wavenumber | 0 | 
+summary(reg6 <-  lfe::felm(DM_decides_garden_T ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids  | unique_loc_id + wavenumber | 0 | 
                              unique_loc_id, data = final.df))
 
-summary(reg6 <-  lfe::felm(DM_decides_garden_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
+summary(reg7 <-  lfe::felm(DM_control_small_livestock_T ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids   | unique_loc_id + wavenumber | 0 | 
                              unique_loc_id, data = final.df))
 
-
-summary(reg7 <-  lfe::felm(DM_control_small_livestock_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)  | unique_loc_id + wavenumber | 0 | 
+summary(reg8 <-  lfe::felm(DM_HH_fix_expenditures_T ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                             hh_size + hh_kids + hh_young_kids | unique_loc_id + wavenumber | 0 | 
                              unique_loc_id, data = final.df))
 
-summary(reg8 <-  lfe::felm(DM_HH_fix_expenditures_T ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                             hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | unique_loc_id + wavenumber | 0 | 
-                             unique_loc_id, data = final.df))
-
-stargazer::stargazer(reg1, reg2, reg3, reg4, covariate.labels = c("$hat{mu}$", "$hat{mu}^2$", "HH Log Earnings", 
+stargazer::stargazer(reg1, reg2, reg3, reg4, covariate.labels = c("$hat{eta}$",  "HH Log Earnings", 
                                                                   "# Women", "# Men", "HH Size", "# Kids", "# Young Kids",
-                                                                  "Gov. Poverty Dummy", "NA", "Extreme Pov 1", "Extreme Pov 2"), 
+                                                                  "Gov. Poverty Dummy" ), 
                      title = "Decision Making Patterns and Bargaining Power")
 
-stargazer::stargazer(reg5, reg6, reg7, reg8,  covariate.labels = c("$hat{mu}$", "$hat{mu}^2$", "HH Log Earnings", 
+stargazer::stargazer(reg5, reg6, reg7, reg8,  covariate.labels = c("$hat{eta}$", "HH Log Earnings", 
                                                                    "# Women", "# Men", "HH Size", "# Kids", "# Young Kids",
-                                                                   "Gov. Poverty Dummy", "NA", "Extreme Pov 1", "Extreme Pov 2"), 
+                                                                   "Gov. Poverty Dummy"), 
                      title = "Decision Making Patterns and Bargaining Power, Continued")
 
 
 
-summary(reg9 <-  lfe::felm(AD_women_in_home ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults +
-                             hh_size + hh_kids + hh_young_kids  + factor(pobre) + factor(pobextre)  | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+summary(reg9 <-  lfe::felm(AD_women_in_home ~ BP + hh_log_wages +  num_f_adults + num_m_adults +
+                             hh_size + hh_kids + hh_young_kids    | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                              folio, data = final.df))
 
-summary(reg10 <-  lfe::felm(AD_obedience ~ BP + I(BP^2) + hh_log_wages +   num_f_adults + num_m_adults +
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+summary(reg10 <-  lfe::felm(AD_obedience ~ BP + hh_log_wages +   num_f_adults + num_m_adults +
+                              hh_size + hh_kids + hh_young_kids  | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
-summary(reg11 <-  lfe::felm(AD_say_comm ~ BP + I(BP^2) + hh_log_wages +   num_f_adults + num_m_adults +
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)  | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
+summary(reg11 <-  lfe::felm(AD_say_comm ~ BP +  hh_log_wages +   num_f_adults + num_m_adults +
+                              hh_size + hh_kids + hh_young_kids  | factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
-summary(reg12 <-  lfe::felm(AD_women_job ~ BP + I(BP^2) + hh_log_wages +   num_f_adults + num_m_adults +
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | 
+summary(reg12 <-  lfe::felm(AD_women_job ~ BP + hh_log_wages +   num_f_adults + num_m_adults +
+                              hh_size + hh_kids + hh_young_kids | 
                               factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
-summary(reg13 <-  lfe::felm(AD_equal_rights ~ BP + I(BP^2) + hh_log_wages +   num_f_adults + num_m_adults +
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | 
+summary(reg13 <-  lfe::felm(AD_equal_rights ~ BP + hh_log_wages +   num_f_adults + num_m_adults +
+                              hh_size + hh_kids + hh_young_kids | 
                               factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
 summary(reg14 <-  lfe::felm(AD_women_opinions ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) |
+                              hh_size + hh_kids + hh_young_kids  |
                               factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
@@ -539,35 +538,34 @@ final.df$PAG <- rowSums(cbind(final.df$PAG_boys, final.df$PAG_girls, final.df$PA
 summary(final.df$PAG)
 
 
-summary(reg15 <-  lfe::felm(asinh(PAG_boys) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | #factor(pobre) + factor(pobextre) |
+summary(reg15 <-  lfe::felm(asinh(PAG_boys) ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids | #factor(pobre) + factor(pobextre) |
                               factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
-summary(reg16 <-  lfe::felm(asinh(PAG_girls) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | #factor(pobre) + factor(pobextre) |
+summary(reg16 <-  lfe::felm(asinh(PAG_girls) ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids | #factor(pobre) + factor(pobextre) |
                               factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
-summary(reg17 <-  lfe::felm(asinh(PAG_womens) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre)| # |
+summary(reg17 <-  lfe::felm(asinh(PAG_womens) ~ BP +  hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids | # |
                               factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
-summary(reg18 <-  lfe::felm(asinh(PAG_mens) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | #factor(pobre) + factor(pobextre) |
+summary(reg18 <-  lfe::felm(asinh(PAG_mens) ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids | #factor(pobre) + factor(pobextre) |
                               factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
 
-summary(reg19 <-  lfe::felm(asinh(PAG) ~ BP + I(BP^2) + hh_log_wages +  num_f_adults + num_m_adults + 
-                              hh_size + hh_kids + hh_young_kids + factor(pobre) + factor(pobextre) | #factor(pobre) + factor(pobextre) |
+summary(reg19 <-  lfe::felm(asinh(PAG) ~ BP + hh_log_wages +  num_f_adults + num_m_adults + 
+                              hh_size + hh_kids + hh_young_kids  | #factor(pobre) + factor(pobextre) |
                               factor(unique_loc_id) +  factor(wavenumber) | 0 | 
                               folio, data = final.df))
 
-stargazer(reg15, reg16, reg17, reg18, reg19, covariate.labels = c("$hat{mu}$", "$hat{mu}^2$", "HH Log Earnings", "# Women", "# Men", 
-                                                                  "HH Size", "# Kids", "# Young Kids", "Government Poverty Dummy", 
-                                                                  "Extreme Poverty Dummy", "Extreme Poverty Dummy 1", "Extreme Poverty Dummy 2"), 
+stargazer(reg15, reg16, reg17, reg18, reg19, covariate.labels = c("$hat{mu}$", "HH Log Earnings", "# Women", "# Men", 
+                                                                  "HH Size", "# Kids", "# Young Kids"), 
           title = "Power and Private Assignable Goods Expenditures")
 
 
