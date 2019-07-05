@@ -1055,10 +1055,10 @@ panel_1A <- ggplot(filter(final.df, wavenumber == 1)) +
                                fill = Treatment, 
                                group = Treatment), 
                  bins = 15, position="identity", alpha = 0.75) + 
-  ylim(c(0,4)) +
+ # ylim(c(0,4)) +
   geom_density(mapping = aes(x = BP, y = ..density.., 
                                #fill = Treatment,
-                               group = Treatment), size = 0.75, adjust = 2) + 
+                               group = Treatment), size = 0.75, adjust = 4) + 
   labs(title = "1997", y = "% of Households", x = "Bargaining Power") + 
   theme(axis.ticks = element_blank(),
         # axis.text.y = element_blank(),
@@ -1083,7 +1083,7 @@ panel_2A <- ggplot(filter(final.df, wavenumber == 2)) +
                                fill = Positive_Progresa), 
                  bins = 15, position="identity",
                  alpha = 0.75) + 
-  ylim(c(0,4)) +
+ # ylim(c(0,4)) +
   geom_density(mapping = aes(x = BP, y = ..density..,
                               group = Positive_Progresa),
                position="identity", adjust = 2, size = 0.75) + 
@@ -1099,7 +1099,7 @@ panel_3A <- ggplot(filter(final.df, wavenumber == 3)) +
   geom_histogram(mapping = aes(x = BP, y = ..density..,
                                fill = Positive_Progresa), 
                  bins = 15,  position="identity", alpha = 0.75) + 
-  ylim(c(0,4)) +
+ # ylim(c(0,4)) +
   geom_density(mapping = aes(x = BP, y = ..density.., 
                             # color = Positive_Progresa,
                              group = Positive_Progresa), adjust = 2, size = 0.75) + 
@@ -1133,7 +1133,7 @@ summary(final.df$BP[final.df$wavenumber == 1])
 # Chapter 6: Generating the Chicken + Milk Table ####
 
 p1 <- summary(Chick_LPM <- felm(pollo ~ BP +  hh_log_wages + hh_kids + hh_young_kids + 
-                            chicken.price_hybrid +
+                            chicken.price_hybrid  + 
                             beef.price_hybrid + pork.price_hybrid +   beef.price_hybrid + pork.price_hybrid + 
                             lard.price_hybrid + sardines.price_hybrid + tuna.price_hybrid +  
                            # orange.price_hybrid + apple.price_hybrid + lime.price_hybrid +
@@ -1584,9 +1584,9 @@ panel_1 <- ggplot(data = results.df) +
   theme(axis.ticks = element_blank(), 
      # axis.text.y = element_blank(),
       axis.title.y = element_blank(), 
-     axis.title.x = element_blank(), 
+     # axis.title.x = element_blank(), 
      legend.position = "none") +
-  labs(title = "Intensive Margin", y = " ")  + 
+  labs(title = "Intensive Margin", y = "Marginal Effect of An Increase in Women's Power on Family Diet")  + 
   coord_flip()
 
 panel_1
