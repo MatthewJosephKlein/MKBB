@@ -951,7 +951,7 @@ women.reg <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy 
                      I(num_f_adults*prop_usa_migrant) +
                      as.factor(year_wave_FE) + receive_progresa  +  
                      asinh(progresa_income_mom),
-                   data = women.sub,
+                   data = women.sub,  
                    method = "ml")  
   
 
@@ -983,20 +983,14 @@ stargazer::stargazer(women.reg, men.reg, selection.equation = TRUE, omit = c("ye
                        "Female HH Head's Progresa Income", 
                        "ER1 Interaction", "ER2 Interaction", "ER3 Interaction"))
 
-a <- summary(men.reg)
-b <- summary(women.reg)
-
-
-a <- tibble()
-    
-
-
+a <- summary(men.reg, cluster=c("unique_loc_id"))
+b <- summary(women.reg, cluster=c("unique_loc_id"))
 
 t1 <- xtable::xtable(a$estimate[1:53,],  omit = c("year_wave_FE"), single.row = T)
 t2 <- xtable::xtable(b$estimate[1:52,],  omit = c("year_wave_FE"), single.row = T)
 
 t <- as.data.frame(cbind(rownames(a$estimate)[1:53],t1[1:52,"Estimate"], 
-                         t1[1:52,"Std. error"], t2[1:52,"Estimate"], t2[1:52,c("Std. error")]), NCOL=5)
+                         t1[1:52,"Std. Error"], t2[1:52,"Estimate"], t2[1:52,c("Std. Error")]), NCOL=5)
 
 colnames(t) <- c("Names", "Women Estimate1", " Women Std.1", " Men Estimate2", "Men std.2")
 
@@ -1007,6 +1001,28 @@ t$`Men std.2` <- as.numeric(as.character(t$`Men std.2`))
 
 
 stargazer::stargazer(t, summary = FALSE, omit = c("as.factor(year_wave_FE)"))
+
+t3 <- xtable::xtable(a$estimate[53:100,],  omit = c("year_wave_FE"), single.row = T) # Men
+t4 <- xtable::xtable(b$estimate[54:102,],  omit = c("year_wave_FE"), single.row = T) # Women
+
+t <- as.data.frame(cbind(rownames(a$estimate)[53:100],
+                         t3[1:48,"Estimate"], 
+                         t3[1:48,"Std. Error"]), NCOL = 3)
+                       
+t#  t4[54:102,"Estimate"],
+                        # t4[54:102,c("Std. Error")]), NCOL=5)
+
+colnames(t) <- c("Names", "Women Estimate1", " Women Std.1", " Men Estimate2", "Men std.2")
+
+t$`Women Estimate1` <- as.numeric(as.character(t$`Women Estimate1`))
+t$` Women Std.1` <- as.numeric(as.character(t$` Women Std.1`))
+t$` Men Estimate2` <- as.numeric(as.character(t$` Men Estimate2`))
+t$`Men std.2` <- as.numeric(as.character(t$`Men std.2`))
+
+
+stargazer::stargazer(t, summary = FALSE, omit = c("as.factor(year_wave_FE)"))
+
+
 
 # Chapter 5: Generating Figure 1: a graph of BP over time for the treatment and control groups #####
 
