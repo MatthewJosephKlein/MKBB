@@ -16,7 +16,7 @@ library("sampleSelection")
 library("lfe")
 library("glmmML")
 library("tidyverse")
-library("ihs")
+# library("ihs")
 
 load("hh.df.Rda") # From "Final Cleaning for Master Panel Construction.R"
 
@@ -85,6 +85,15 @@ data.df <- subset(hh.df,
                     hh.df$num_f_adults <= 5 & 
                     hh.df$hh_young_kids <= quantile(hh.df$hh_young_kids, 0.95))
 
+data.df <- data.df %>% mutate(scaled.age = ((age - mean(age)) / sd(age)), 
+                              scaled.age.squared = (((age^2) - mean((age^2))) / sd((age^2))),
+                              scaled.earnings = ((wages - mean(wages)) / sd(wages)),
+                              scaled.num.f.adults = ((num_f_adults - mean(num_f_adults)) / sd(num_f_adults)),
+                              scaled.num.m.adults = ((num_m_adults - mean(num_m_adults)) / sd(num_m_adults)),
+                              scaled.f.kids = ((number_female_kids - mean(number_female_kids)) / sd(number_female_kids)),
+                              scaled.m.kids = ((number_male_kids - mean(number_male_kids)) / sd(number_male_kids)))
+  
+summary(data.df$scaled.earnings)
 
 #Make training and test data: 
 dt = sort(sample(nrow(data.df), nrow(data.df)*.9))
@@ -93,23 +102,108 @@ test.df <- data.df[-dt,]
 
 # Predict the values using the neural net package and the same regressors as using the heckman 
 
-plot(boys.net <- neuralnet::neuralnet(formula = wages ~ age  + #otherincomeval + 
-                                 hh_kids  + 
-                                 hh_young_kids + edu_yrs  +# literate +
-                                  # gov_transfer +
-                                 #indigenous_language + spanish_language + 
-                                #   head_dummy +
-                                   num_f_adults +
-                                 num_m_adults, #pobextre +  mpcalif  +
-                                 # number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + 
-                                 # prop_usa_migrant_dummy  +
-                                 # receive_progresa ,
-                               data = filter(train.df, train.df$sex == 0), 
-                               hidden = 2), 
-     information = TRUE)
+# Set the formula to be used in the NN  
+earnings.reduced.form <- as.formula("scaled.earnings ~ scaled.age + scaled.age.squared +  scaled.f.kids +
+                                    scaled.num.m.adults + literate + scaled.m.kids + 
+                                    number_male_kids + sex +
+                                    prop_mex_migrant_dummy + prop_usa_migrant_dummy" )
 
-summary(boys.test.df.predictions <- predict(boys.net, filter(test.df, test.df$sex == 0)))
-summary(boys.training.df.predictions <- predict(boys.net, filter(train.df, train$sex == 0)))
+# Fit the Neural Net to the full Sample for now, just to visualize
+boys.net <- neuralnet::neuralnet(formula = earnings.reduced.form,
+                                  data = filter(data.df, data.df$sex == 0), 
+                                  hidden = c(2,2), 
+                                  linear.output = TRUE, 
+                                  threshold = 0.5)
+
+girls.net <- neuralnet::neuralnet(formula = earnings.reduced.form,
+                                 data = filter(data.df, data.df$sex == 1), 
+                                 hidden = c(2,2), 
+                                 linear.output = TRUE, 
+                                 threshold = 0.5)
+
+plot(girls.net, information = TRUE)
+
+# Save the boys predictions as a standalone variables (can be appended to data.df by sex later.)
+boys.test.df.predictions <- predict(boys.net, filter(test.df, test.df$sex == 0))
+summary(NNet.boys <- boys.test.df.predictions*sd(data.df$wages[data.df$sex == 0]) +  
+          mean(data.df$wages[data.df$sex == 0]))
+
+girls.test.df.predictions <- predict(girls.net, filter(test.df, test.df$sex == 1))
+summary(NNet.girls <- girls.test.df.predictions*sd(data.df$wages[data.df$sex == 1]) +  
+          mean(data.df$wages[data.df$sex == 1]))
+
+# Let's fit preliminary Heckman's for men and women too so that we can visualize 
+# The differences between the predictions and raw data using these two separate approaches 
+
+# Heckman Regression for MEn
+reg.men <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+                   hh_young_kids + edu_yrs + literate + gov_transfer +
+                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+                   number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                   I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                   I(num_f_adults*prop_usa_migrant) +    
+                   as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+                   (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
+                 outcome = scaled.earnings ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+                   hh_young_kids + edu_yrs  + literate + gov_transfer +
+                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
+                   number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                   I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                   I(num_f_adults*prop_usa_migrant) +    
+                   as.factor(year_wave_FE) + receive_progresa,
+                 data = filter(data.df, data.df$sex == 0),
+                 method = "ml")
+
+# Heckman Regression for women
+reg.women <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+                       hh_young_kids + edu_yrs + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+                       number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                       I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                       I(num_f_adults*prop_usa_migrant) +    
+                       as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+                       (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
+                     outcome = scaled.earnings ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+                       hh_young_kids + edu_yrs  + literate + gov_transfer +
+                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
+                       number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+                       I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+                       I(num_f_adults*prop_usa_migrant) +    
+                       as.factor(year_wave_FE) + receive_progresa,
+                     data = filter(data.df, data.df$sex == 1),
+                     method = "ml")
+
+
+summary(heckman.men <- (predict(reg.men, filter(test.df, test.df$sex == 0))*
+                          sd(test.df$wages[test.df$sex==0]) +  
+                          mean(test.df$wages[test.df$sex==0])))
+
+summary(heckman.women <- (predict(reg.women, filter(test.df, test.df$sex == 1))*
+                          sd(test.df$wages[test.df$sex==1]) +  
+                          mean(test.df$wages[test.df$sex==1])))
+
+
+# Visualizing the naive NN predictions veruss the heckman predictions   
+ggplot() + geom_density(mapping = aes(x = test.df$wages[test.df$sex==0]), fill = "red", alpha=0.25) +
+  geom_density(mapping = aes(x = heckman.men), fill = "blue", alpha=0.25) + 
+  geom_density(mapping = aes(x = NNet.boys), fill = "black", alpha=0.25) + 
+  theme_bw() + labs(x= "Earnings (Red) v. Heckman Prediction (Blue) v. Neural Network (Black)", 
+                    title = "Earnings Versus Predictions for Men")
+
+
+ggplot() + geom_density(mapping = aes(x = test.df$wages[test.df$sex==0]), fill = "red", alpha=0.25) +
+  geom_density(mapping = aes(x = heckman.women), fill = "blue", alpha=0.25) + 
+  geom_density(mapping = aes(x = NNet.women), fill = "black", alpha=0.25) + 
+  theme_bw() + labs(x= "Earnings (Red) v. Heckman Prediction (Blue) v. Neural Network (Black)", 
+                    title = "Earnings Versus Predictions for Women")
+
+
+
+summary(boys.training.df.predictions <- predict(boys.net, filter(train.df, train.df$sex == 0)))
 
 summary(girls.test.df.predictions <- predict(girls.net, filter(test.df, test.df$sex == 1)))
 summary(girls.training.df.predictions <- predict(girls.net, filter(train.df, train$sex == 1)))
@@ -171,7 +265,7 @@ SE.Fun <- function(gender_number){ #gender_number == 1 corresponds to women.
                      I(num_f_adults*prop_usa_migrant) +    
                      as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
                      (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
-                   outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+                   outcome = scaled.earnings ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
                     hh_young_kids + edu_yrs  + literate + gov_transfer +
                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
                      number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
