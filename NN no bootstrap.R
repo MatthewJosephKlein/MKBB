@@ -114,7 +114,7 @@ earnings.reduced.form <- as.formula("scaled.earnings ~ scaled.age + scaled.age.s
 # Fit the Neural Net to the full Sample for now, just to visualize
 girls.net <- neuralnet::neuralnet(formula = earnings.reduced.form,
                                   data = filter(data.df, data.df$sex == 1), 
-                                  hidden = c(2,2), 
+                                  hidden = c(4,3), 
                                   linear.output = TRUE, 
                                   threshold = 0.5)
 
@@ -127,7 +127,7 @@ summary(NNet.girls <- girls.test.df.predictions*sd(data.df$wages[data.df$sex == 
 # For the lads: 
 boys.net <- neuralnet::neuralnet(formula = earnings.reduced.form,
                                  data = filter(data.df, data.df$sex == 0), 
-                                 hidden = c(2,2), 
+                                 hidden = c(4,3), 
                                  linear.output = TRUE, 
                                  threshold = 0.5)
 
