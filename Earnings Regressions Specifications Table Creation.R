@@ -61,14 +61,19 @@ hh.df$otherincomeval_dummy <- ifelse(hh.df$otherincomeval > 0, 1, 0)
 
 hh.df <- hh.df %>% filter(hh_wages != 0)
 
+# Women's LFP as the OO
 summary(hh.df$womensLFP <- ifelse(test = hh.df$LFP == 1 & hh.df$sex ==1 & hh.df$head_dummy ==1, yes = 1, no = 0))
 summary(womensLFP.df <- aggregate(hh.df$womensLFP, by = list(hh.df$folio), FUN = sum, na.rm=T))
 colnames(womensLFP.df) <- c("folio", "HHwomensLFP")
 womensLFP.df$HHwomensLFP[womensLFP.df$HHwomensLFP > 1] <- 1 
 
+# HH to Question "is a women's place in the household?" question
+content goes here m'boy
+
 hh.df <- left_join(hh.df, womensLFP.df)
 
-summary(hh.df$HHwomensLFP)
+summary(hh.df$HHwomensLFP) # Keep an eye on this, compared to what's in the paper and make sure it lines up. 
+                           # Havent' fully subsetted the data yet, explaining the differences. Still, keep an eye on it, champ.
 
 # Creating the subsets to run the two regressions  on: 
   women.df <- subset(hh.df,  
@@ -193,13 +198,12 @@ summary(hh.df$HHwomensLFP)
   women.original.df$y_hat <- ifelse(women.original.df$LFP == 1, women.original.df$"E[yo|ys=1]", women.original.df$"E[yo|ys=0]")
   men.original.df$y_hat   <- ifelse(men.original.df$LFP == 1, men.original.df$"E[yo|ys=1]", men.original.df$"E[yo|ys=0]")
   
-  y_hat.original.df <- cbind(select(  men.original.df, folio, ind_ID, wavenumber, y_hat), 
-                    select(women.original.df, folio, ind_ID, wavenumber, y_hat))
+  summary(y_hat.original.df <- cbind(select(  men.original.df, folio, ind_ID, wavenumber, y_hat), 
+                    select(women.original.df, folio, ind_ID, wavenumber, y_hat)))
   
-
   
-  # Let's do it again chumps, this time with women's LFP as the OO proxy
-  men.reg.womensLFP <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+  # Let's do it again chumps, this time with women's LFP as the OO proxy ####
+  men.reg.womensLFP <- selection(selection = HHwomensLFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
                                   hh_young_kids + edu_yrs + literate + gov_transfer +
                                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
                                   number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
@@ -219,7 +223,7 @@ summary(hh.df$HHwomensLFP)
                                 data = men.df,
                                 method = "ml")
   
-  women.reg.original <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+  women.reg.womensLFP <- selection(selection = HHwomensLFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
                                     hh_young_kids + edu_yrs  + literate + gov_transfer +
                                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
                                     number_female_kids + number_male_kids  + 
@@ -244,28 +248,31 @@ summary(hh.df$HHwomensLFP)
                                   data = women.df,
                                   method = "ml")  
   
-  summary(exp(predict(men.reg.original, newdata = men.df, type = "conditional")))
-  summary(exp(predict(women.reg.original, newdata = women.df, type = "conditional")))
+  summary(exp(predict(men.reg.womensLFP, newdata = men.df, type = "conditional")))
+  summary(exp(predict(women.reg.womensLFP, newdata = women.df, type = "conditional")))
   
   
   # Add the predicted values to data.df, conditional on LFP
-  women.df <- cbind(women.df, exp(predict(women.reg.original,
+  women.womensLFP.df <- cbind(women.df, exp(predict(women.reg.womensLFP,
                                           newdata = women.df,
                                           type = "conditional")))
   
-  men.df <- cbind(men.df, exp(predict(men.reg.original,
+  men.womensLFP.df <- cbind(men.df, exp(predict(men.reg.womensLFP,
                                       newdata = men.df, 
                                       type = "conditional")))
   
   # Select the correct prediction based on LFP: 
-  women.df$y_hat <- ifelse(women.df$LFP == 1, women.df$"E[yo|ys=1]", women.df$"E[yo|ys=0]")
-  men.df$y_hat   <- ifelse(men.df$LFP == 1, men.df$"E[yo|ys=1]", men.df$"E[yo|ys=0]")
+  women.womensLFP.df$y_hat <- ifelse(women.womensLFP.df$LFP == 1, women.womensLFP.df$"E[yo|ys=1]", women.womensLFP.df$"E[yo|ys=0]")
+  men.womensLFP.df$y_hat   <- ifelse(men.womensLFP.df$LFP == 1, men.womensLFP.df$"E[yo|ys=1]", men.womensLFP.df$"E[yo|ys=0]")
   
-  y_hat.df <- cbind(select(  men.df, folio, ind_ID, wavenumber, y_hat), 
-                    select(women.df, folio, ind_ID, wavenumber, y_hat))
+  summary(y_hat.womensLFP.df <- cbind(select(  men.womensLFP.df, folio, ind_ID, wavenumber, y_hat), 
+                    select(women.womensLFP.df, folio, ind_ID, wavenumber, y_hat)))
   
   
   
+  # Leaving off here for tonight 
+  summary(exp(predict(men.reg.original, newdata = men.df, type = "conditional")))
+  summary(exp(predict(men.reg.womensLFP, newdata = men.df, type = "conditional")))
   
   # (A.2) BP Function 
 BP.Fun <- function(){ #Calls shadow wage function
