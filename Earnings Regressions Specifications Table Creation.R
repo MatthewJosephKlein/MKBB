@@ -5,6 +5,8 @@
 #    3) make a table with the prediction results and the BP for each specification
 #    
 
+# Created Feburary 2021 to start working on the alternative empirical specifications
+
 # Editing on 4/14/2021 - I hope I don't delete something important to the project LOL 
 # Just going to comment out the old men's and women's heckman regressions. 
 
@@ -190,20 +192,23 @@ summary(hh.df$HHwomensLFP) # Keep an eye on this, compared to what's in the pape
   
   both.df$fitted.wages[both.df$fitted.wages < 0] <- 0
   
+  both.df$Gender <- factor(both.df$sex)
+  levels(both.df$Gender) <- c("men", "women")
+  
   ggplot(data = both.df) + 
     geom_point(mapping = aes(x = wages, 
                              y = fitted.wages, 
                              group = Gender, 
-                             color = Gender), alpha = 0.25) +
+                             color = Gender), alpha = 0.01) +
     geom_smooth(mapping = aes(x = wages, 
                               y = fitted.wages, 
                               group = Gender, 
-                              color = Gender), alpha = 0.25) 
+                              color = Gender), size = 1, method = "lm") +
+    theme_bw()
     
     
   
-  both.df$Gender <- factor(both.df$sex)
-  levels(both.df$Gender) <- c("men", "women")
+ 
   
   both.df$Gender_And_Alcohol <- factor(paste0(both.df$sex, 
                                               both.df$HHAlcohol))
@@ -263,315 +268,312 @@ summary(hh.df$HHwomensLFP) # Keep an eye on this, compared to what's in the pape
   # summary(both.womensLFP.df$y_hat[both.womensLFP.df$sex ==0])
   # 
   # Run a boat load of regressions, boys, starting with the unconditional model ####
-  
-  men.reg.original <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
-                     hh_young_kids + edu_yrs + literate + gov_transfer +
-                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                     number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                     I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
-                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                     I(num_f_adults*prop_usa_migrant) +    
-                     as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                     (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
-                   outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
-                    hh_young_kids + edu_yrs  + literate + gov_transfer +
-                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
-                     number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                     I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
-                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                     I(num_f_adults*prop_usa_migrant) +    
-                     as.factor(year_wave_FE) + receive_progresa,
-                   data = men.df,
-                   method = "ml")
-  
-    women.reg.original <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
-                  hh_young_kids + edu_yrs  + literate + gov_transfer +
-                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                       number_female_kids + number_male_kids  + 
-                    prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                    I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
-                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                    I(num_f_adults*prop_usa_migrant) +
-                      as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                    (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
-                    asinh(progresa_income_mom), 
-                  # 
-                     outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
-                        hh_young_kids + edu_yrs  + literate + gov_transfer +
-                       indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                       number_female_kids + number_male_kids  +
-                   prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                       I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
-                       I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                      I(num_f_adults*prop_usa_migrant) +
-                      as.factor(year_wave_FE) + receive_progresa  +  
-                       asinh(progresa_income_mom),
-                     data = women.df,
-                     method = "ml")  
-    
-        summary(exp(predict(men.reg.original, newdata = men.df, type = "conditional")))
-        summary(exp(predict(women.reg.original, newdata = women.df, type = "conditional")))
-        
-  
-  # Add the predicted values to data.df, conditional on LFP
-  women.original.df <- cbind(women.df, exp(predict(women.reg.original,
-                               newdata = women.df,
-                               type = "conditional")))
-  
-  men.original.df <- cbind(men.df, exp(predict(men.reg.original,
-                                newdata = men.df, 
-                                type = "conditional")))
-
-  # Select the correct prediction based on LFP: 
-  summary(women.original.df$y_hat <- ifelse(women.original.df$LFP == 1, women.original.df$"E[yo|ys=1]", women.original.df$"E[yo|ys=0]"))
-  summary(men.original.df$y_hat   <- ifelse(men.original.df$LFP == 1, men.original.df$"E[yo|ys=1]", men.original.df$"E[yo|ys=0]"))
-  
-  
-  # Let's do it again chumps, this time with women's LFP as the OO proxy ####
-  men.reg.womensLFP <- selection(selection = HHwomensLFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
-                                  hh_young_kids + edu_yrs + literate + gov_transfer +
-                                  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                  number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                  I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
-                                  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                  I(num_f_adults*prop_usa_migrant) +    
-                                  as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                                  (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
-                                outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
-                                  hh_young_kids + edu_yrs  + literate + gov_transfer +
-                                  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
-                                  number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                  I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
-                                  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                  I(num_f_adults*prop_usa_migrant) +    
-                                  as.factor(year_wave_FE) + receive_progresa,
-                                data = men.df,
-                                method = "ml")
-  
-  women.reg.womensLFP <- selection(selection = HHwomensLFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
-                                    hh_young_kids + edu_yrs  + literate + gov_transfer +
-                                    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                    number_female_kids + number_male_kids  + 
-                                    prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                    I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
-                                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                    I(num_f_adults*prop_usa_migrant) +
-                                    as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                                    (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
-                                    asinh(progresa_income_mom), 
-                                  # 
-                                  outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
-                                    hh_young_kids + edu_yrs  + literate + gov_transfer +
-                                    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                    number_female_kids + number_male_kids  +
-                                    prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                    I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
-                                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                    I(num_f_adults*prop_usa_migrant) +
-                                    as.factor(year_wave_FE) + receive_progresa  +  
-                                    asinh(progresa_income_mom),
-                                  data = women.df,
-                                  method = "ml")  
-  
-  summary(exp(predict(men.reg.womensLFP, newdata = men.df, type = "conditional")))
-  summary(exp(predict(women.reg.womensLFP, newdata = women.df, type = "conditional")))
-  
-  
-  # Add the predicted values to data.df, conditional on LFP
-  women.womensLFP.df <- cbind(women.df, exp(predict(women.reg.womensLFP,
-                                          newdata = women.df,
-                                          type = "conditional")))
-  
-  men.womensLFP.df <- cbind(men.df, exp(predict(men.reg.womensLFP,
-                                      newdata = men.df, 
-                                      type = "conditional")))
-  
-  # Select the correct prediction based on LFP: 
-  summary(women.womensLFP.df$y_hat <- ifelse(women.womensLFP.df$HHwomensLFP == 1, women.womensLFP.df$"E[yo|ys=1]", women.womensLFP.df$"E[yo|ys=0]"))
-  summary(men.womensLFP.df$y_hat   <- ifelse(men.womensLFP.df$HHwomensLFP == 1, men.womensLFP.df$"E[yo|ys=1]", men.womensLFP.df$"E[yo|ys=0]"))
-  
-  summary(y_hat.womensLFP.df <- cbind(select(  men.womensLFP.df, folio, ind_ID, wavenumber, y_hat), 
-                    select(women.womensLFP.df, folio, ind_ID, wavenumber, y_hat)))
-  
-  
-  
-# Let's do it again but with Alcohol as the thingy #####
-  
-  men.reg.alcohol <- selection(selection = HHAlcohol ~ alcohol.price_hybrid + alcohol.price_hybrid*(age + I(age^2))  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
-                                   hh_young_kids + edu_yrs + literate + gov_transfer +
-                                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                 alcohol.price_hybrid*(number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy)  +
-                                   I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
-                                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                   I(num_f_adults*prop_usa_migrant) +    
-                                   as.factor(year_wave_FE) + receive_progresa,  # FE and Exclusion Restrictions
-                                outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
-                                  hh_young_kids + edu_yrs  + literate + gov_transfer +
-                                  indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
-                                  number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                  I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
-                                  I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                  I(num_f_adults*prop_usa_migrant) +    
-                                   as.factor(year_wave_FE) + receive_progresa,
-                                data = men.df,
-                                method = "ml")
-  
-  
-  women.reg.alcohol <- selection(selection = HHAlcohol ~ alcohol.price_hybrid + age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
-                                     hh_young_kids + edu_yrs  + literate + gov_transfer+
-                                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                    number_female_kids + number_male_kids, 
-                                    # prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                    # I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
-                                    # I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                    # I(num_f_adults*prop_usa_migrant) +
-                                    # as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                                    # (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
-                                    # asinh(progresa_income_mom), 
-                                  outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
-                                    hh_young_kids + edu_yrs  + literate + gov_transfer +
-                                    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                    number_female_kids + number_male_kids ,
-                                    # prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                    # I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
-                                    # I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                    # I(num_f_adults*prop_usa_migrant) +
-                                    # as.factor(year_wave_FE) + receive_progresa  +  
-                                    # asinh(progresa_income_mom),
-                                  data = women.df,
-                                  method = "ml")  
-  
-  summary(exp(predict(men.reg.alcohol, newdata = men.df, type = "conditional")))
-  summary(exp(predict(women.reg.alcohol, newdata = women.df, type = "conditional")))
+  # 
+  # men.reg.original <- selection(selection = LFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+  #                    hh_young_kids + edu_yrs + literate + gov_transfer +
+  #                    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+  #                    number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+  #                    I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+  #                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+  #                    I(num_f_adults*prop_usa_migrant) +    
+  #                    as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+  #                    (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
+  #                  outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+  #                   hh_young_kids + edu_yrs  + literate + gov_transfer +
+  #                    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
+  #                    number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+  #                    I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+  #                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+  #                    I(num_f_adults*prop_usa_migrant) +    
+  #                    as.factor(year_wave_FE) + receive_progresa,
+  #                  data = men.df,
+  #                  method = "ml")
+  # 
+  #   women.reg.original <- selection(selection = LFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+  #                 hh_young_kids + edu_yrs  + literate + gov_transfer +
+  #                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+  #                      number_female_kids + number_male_kids  + 
+  #                   prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+  #                   I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
+  #                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+  #                   I(num_f_adults*prop_usa_migrant) +
+  #                     as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+  #                   (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
+  #                   asinh(progresa_income_mom), 
+  #                 # 
+  #                    outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+  #                       hh_young_kids + edu_yrs  + literate + gov_transfer +
+  #                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+  #                      number_female_kids + number_male_kids  +
+  #                  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+  #                      I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
+  #                      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+  #                     I(num_f_adults*prop_usa_migrant) +
+  #                     as.factor(year_wave_FE) + receive_progresa  +  
+  #                      asinh(progresa_income_mom),
+  #                    data = women.df,
+  #                    method = "ml")  
+  #   
+  #       summary(exp(predict(men.reg.original, newdata = men.df, type = "conditional")))
+  #       summary(exp(predict(women.reg.original, newdata = women.df, type = "conditional")))
+  #       
+  # 
+  # # Add the predicted values to data.df, conditional on LFP
+  # women.original.df <- cbind(women.df, exp(predict(women.reg.original,
+  #                              newdata = women.df,
+  #                              type = "conditional")))
+  # 
+  # men.original.df <- cbind(men.df, exp(predict(men.reg.original,
+  #                               newdata = men.df, 
+  #                               type = "conditional")))
+  # 
+  # # Select the correct prediction based on LFP: 
+  # summary(women.original.df$y_hat <- ifelse(women.original.df$LFP == 1, women.original.df$"E[yo|ys=1]", women.original.df$"E[yo|ys=0]"))
+  # summary(men.original.df$y_hat   <- ifelse(men.original.df$LFP == 1, men.original.df$"E[yo|ys=1]", men.original.df$"E[yo|ys=0]"))
+  # 
+  # 
+  # # Let's do it again chumps, this time with women's LFP as the OO proxy ####
+  # men.reg.womensLFP <- selection(selection = HHwomensLFP ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+  #                                 hh_young_kids + edu_yrs + literate + gov_transfer +
+  #                                 indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+  #                                 number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+  #                                 I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+  #                                 I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+  #                                 I(num_f_adults*prop_usa_migrant) +    
+  #                                 as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+  #                                 (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
+  #                               outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+  #                                 hh_young_kids + edu_yrs  + literate + gov_transfer +
+  #                                 indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
+  #                                 number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+  #                                 I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+  #                                 I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+  #                                 I(num_f_adults*prop_usa_migrant) +    
+  #                                 as.factor(year_wave_FE) + receive_progresa,
+  #                               data = men.df,
+  #                               method = "ml")
+  # 
+  # women.reg.womensLFP <- selection(selection = HHwomensLFP ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+  #                                   hh_young_kids + edu_yrs  + literate + gov_transfer +
+  #                                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+  #                                   number_female_kids + number_male_kids  + 
+  #                                   prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+  #                                   I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
+  #                                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+  #                                   I(num_f_adults*prop_usa_migrant) +
+  #                                   as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+  #                                   (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
+  #                                   asinh(progresa_income_mom), 
+  #                                 # 
+  #                                 outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+  #                                   hh_young_kids + edu_yrs  + literate + gov_transfer +
+  #                                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+  #                                   number_female_kids + number_male_kids  +
+  #                                   prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+  #                                   I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
+  #                                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+  #                                   I(num_f_adults*prop_usa_migrant) +
+  #                                   as.factor(year_wave_FE) + receive_progresa  +  
+  #                                   asinh(progresa_income_mom),
+  #                                 data = women.df,
+  #                                 method = "ml")  
+  # 
+  # summary(exp(predict(men.reg.womensLFP, newdata = men.df, type = "conditional")))
+  # summary(exp(predict(women.reg.womensLFP, newdata = women.df, type = "conditional")))
   
   
   # Add the predicted values to data.df, conditional on LFP
-  women.Alcohol.df <- cbind(women.df, exp(predict(women.reg.alcohol,
-                                                   newdata = women.df,
-                                                   type = "conditional")))
+#   women.womensLFP.df <- cbind(women.df, exp(predict(women.reg.womensLFP,
+#                                           newdata = women.df,
+#                                           type = "conditional")))
+#   
+#   men.womensLFP.df <- cbind(men.df, exp(predict(men.reg.womensLFP,
+#                                       newdata = men.df, 
+#                                       type = "conditional")))
+#   
+#   # Select the correct prediction based on LFP: 
+#   summary(women.womensLFP.df$y_hat <- ifelse(women.womensLFP.df$HHwomensLFP == 1, women.womensLFP.df$"E[yo|ys=1]", women.womensLFP.df$"E[yo|ys=0]"))
+#   summary(men.womensLFP.df$y_hat   <- ifelse(men.womensLFP.df$HHwomensLFP == 1, men.womensLFP.df$"E[yo|ys=1]", men.womensLFP.df$"E[yo|ys=0]"))
+#   
+#   summary(y_hat.womensLFP.df <- cbind(select(  men.womensLFP.df, folio, ind_ID, wavenumber, y_hat), 
+#                     select(women.womensLFP.df, folio, ind_ID, wavenumber, y_hat)))
+#   
+#   
+#   
+# # Let's do it again but with Alcohol as the thingy #####
+#   
+#   men.reg.alcohol <- selection(selection = HHAlcohol ~ alcohol.price_hybrid + alcohol.price_hybrid*(age + I(age^2))  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+#                                    hh_young_kids + edu_yrs + literate + gov_transfer +
+#                                    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+#                                  alcohol.price_hybrid*(number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy)  +
+#                                    I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+#                                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+#                                    I(num_f_adults*prop_usa_migrant) +    
+#                                    as.factor(year_wave_FE) + receive_progresa,  # FE and Exclusion Restrictions
+#                                 outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+#                                   hh_young_kids + edu_yrs  + literate + gov_transfer +
+#                                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
+#                                   number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+#                                   I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+#                                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+#                                   I(num_f_adults*prop_usa_migrant) +    
+#                                    as.factor(year_wave_FE) + receive_progresa,
+#                                 data = men.df,
+#                                 method = "ml")
+#   
+#   
+#   women.reg.alcohol <- selection(selection = HHAlcohol ~ alcohol.price_hybrid + age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+#                                      hh_young_kids + edu_yrs  + literate + gov_transfer+
+#                                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+#                                     number_female_kids + number_male_kids, 
+#                                     # prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+#                                     # I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
+#                                     # I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+#                                     # I(num_f_adults*prop_usa_migrant) +
+#                                     # as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+#                                     # (ER + proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
+#                                     # asinh(progresa_income_mom), 
+#                                   outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+#                                     hh_young_kids + edu_yrs  + literate + gov_transfer +
+#                                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+#                                     number_female_kids + number_male_kids ,
+#                                     # prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+#                                     # I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
+#                                     # I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+#                                     # I(num_f_adults*prop_usa_migrant) +
+#                                     # as.factor(year_wave_FE) + receive_progresa  +  
+#                                     # asinh(progresa_income_mom),
+#                                   data = women.df,
+#                                   method = "ml")  
+#   
+#   summary(exp(predict(men.reg.alcohol, newdata = men.df, type = "conditional")))
+#   summary(exp(predict(women.reg.alcohol, newdata = women.df, type = "conditional")))
+#   
+#   
+#   # Add the predicted values to data.df, conditional on LFP
+#   women.Alcohol.df <- cbind(women.df, exp(predict(women.reg.alcohol,
+#                                                    newdata = women.df,
+#                                                    type = "conditional")))
+#   
+#   men.Alcohol.df <- cbind(men.df, exp(predict(men.reg.alcohol,
+#                                                newdata = men.df, 
+#                                                type = "conditional")))
+#   
+#   # Select the correct prediction based on LFP: 
+#   summary(women.Alcohol.df $y_hat <- ifelse(women.Alcohol.df $HHAlcohol == 1, women.Alcohol.df $"E[yo|ys=1]", women.Alcohol.df $"E[yo|ys=0]"))
+#   summary(men.Alcohol.df $y_hat   <- ifelse(men.Alcohol.df $HHAlcohol == 1, men.Alcohol.df $"E[yo|ys=1]", men.Alcohol.df $"E[yo|ys=0]"))
+#   
+#   summary(y_hat.original.df <- cbind(select(  men.original.df, folio, ind_ID, wavenumber, y_hat), 
+#                                      select(women.original.df, folio, ind_ID, wavenumber, y_hat)))
+#   
+#   
+#   #  HHNeedPermission is the OO ####
+#   men.reg.HHNeedPermission <- selection(selection =  
+#                                    HHNeedPermission ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
+#                                    hh_young_kids + edu_yrs + literate + gov_transfer +
+#                                    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+#                                    number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+#                                    I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+#                                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+#                                    I(num_f_adults*prop_usa_migrant) +    
+#                                    as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+#                                  #    ER +
+#                                      ( proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
+#                                  outcome = 
+#                                    log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
+#                                    hh_young_kids + edu_yrs  + literate + gov_transfer +
+#                                    indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
+#                                    number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+#                                    I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
+#                                    I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+#                                    I(num_f_adults*prop_usa_migrant) +    
+#                                    as.factor(year_wave_FE) + receive_progresa,
+#                                  data = men.df,
+#                                  method = "ml")
+#   
+#   women.reg.HHNeedPermission <- selection(selection =  
+#                                      HHNeedPermission ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+#                                      hh_young_kids + edu_yrs  + literate + gov_transfer +
+#                                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+#                                      number_female_kids + number_male_kids  + 
+#                                      prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+#                                      I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
+#                                      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+#                                      I(num_f_adults*prop_usa_migrant) +
+#                                      as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
+#                                       # ER + 
+#                                        (proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
+#                                      asinh(progresa_income_mom), 
+#                                    # 
+#                                    outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
+#                                      hh_young_kids + edu_yrs  + literate + gov_transfer +
+#                                      indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
+#                                      number_female_kids + number_male_kids  +
+#                                      prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
+#                                      I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
+#                                      I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
+#                                      I(num_f_adults*prop_usa_migrant) +
+#                                      as.factor(year_wave_FE) + receive_progresa  +  
+#                                      asinh(progresa_income_mom),
+#                                    data = women.df,
+#                                    method = "ml")  
+#   
+#   summary(exp(predict(    men.reg.HHNeedPermission, newdata = men.df, type = "conditional")))
+#   summary(exp(predict(women.reg.HHNeedPermission, newdata = women.df, type = "conditional")))
   
-  men.Alcohol.df <- cbind(men.df, exp(predict(men.reg.alcohol,
-                                               newdata = men.df, 
-                                               type = "conditional")))
   
-  # Select the correct prediction based on LFP: 
-  summary(women.Alcohol.df $y_hat <- ifelse(women.Alcohol.df $HHAlcohol == 1, women.Alcohol.df $"E[yo|ys=1]", women.Alcohol.df $"E[yo|ys=0]"))
-  summary(men.Alcohol.df $y_hat   <- ifelse(men.Alcohol.df $HHAlcohol == 1, men.Alcohol.df $"E[yo|ys=1]", men.Alcohol.df $"E[yo|ys=0]"))
-  
-  summary(y_hat.original.df <- cbind(select(  men.original.df, folio, ind_ID, wavenumber, y_hat), 
-                                     select(women.original.df, folio, ind_ID, wavenumber, y_hat)))
-  
-  
-  #  HHNeedPermission is the OO ####
-  men.reg.HHNeedPermission <- selection(selection =  
-                                   HHNeedPermission ~ age + I(age^2)  + otherincomeval_dummy + asinh(otherincomeval) + hh_kids + 
-                                   hh_young_kids + edu_yrs + literate + gov_transfer +
-                                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                   number_female_kids + number_male_kids   +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                   I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
-                                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                   I(num_f_adults*prop_usa_migrant) +    
-                                   as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                                 #    ER +
-                                     ( proportion_need_permission + proportion_need_accompany)*hh_young_kids,  
-                                 outcome = 
-                                   log_wages ~ age + I(age^2) +  otherincomeval_dummy + asinh(otherincomeval) + hh_kids +
-                                   hh_young_kids + edu_yrs  + literate + gov_transfer +
-                                   indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults +# pobextre +  mpcalif  +
-                                   number_female_kids + number_male_kids  +  prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                   I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant + 
-                                   I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                   I(num_f_adults*prop_usa_migrant) +    
-                                   as.factor(year_wave_FE) + receive_progresa,
-                                 data = men.df,
-                                 method = "ml")
-  
-  women.reg.HHNeedPermission <- selection(selection =  
-                                     HHNeedPermission ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
-                                     hh_young_kids + edu_yrs  + literate + gov_transfer +
-                                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                     number_female_kids + number_male_kids  + 
-                                     prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                     I(num_m_adults*prop_mex_migrant) +   prop_usa_migrant + prop_mex_migrant +
-                                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                     I(num_f_adults*prop_usa_migrant) +
-                                     as.factor(year_wave_FE) + receive_progresa  +  # FE and Exclusion Restrictions
-                                      # ER + 
-                                       (proportion_need_permission + proportion_need_accompany)*hh_young_kids  + # ER*num_f_adults + ER*num_m_adults +
-                                     asinh(progresa_income_mom), 
-                                   # 
-                                   outcome = log_wages ~ age + I(age^2) +  otherincomeval_dummy +  asinh(otherincomeval) + hh_kids +
-                                     hh_young_kids + edu_yrs  + literate + gov_transfer +
-                                     indigenous_language + spanish_language + head_dummy + num_f_adults + num_m_adults + #pobextre +  mpcalif  +
-                                     number_female_kids + number_male_kids  +
-                                     prop_mex_migrant_dummy + prop_usa_migrant_dummy  +
-                                     I(num_m_adults*prop_mex_migrant) +  prop_usa_migrant + prop_mex_migrant +
-                                     I(num_m_adults*prop_usa_migrant) + I(num_f_adults*prop_mex_migrant) +
-                                     I(num_f_adults*prop_usa_migrant) +
-                                     as.factor(year_wave_FE) + receive_progresa  +  
-                                     asinh(progresa_income_mom),
-                                   data = women.df,
-                                   method = "ml")  
-  
-  summary(exp(predict(    men.reg.HHNeedPermission, newdata = men.df, type = "conditional")))
-  summary(exp(predict(women.reg.HHNeedPermission, newdata = women.df, type = "conditional")))
-  
-  
-  # Add the predicted values to data.df, conditional on LFP
-  women.NeedPermission.df <- cbind(women.df, exp(predict(women.reg.HHNeedPermission,
-                                                    newdata = women.df,
-                                                    type = "conditional")))
-  
-  men.NeedPermission.df <- cbind(men.df, exp(predict(men.reg.HHNeedPermission,
-                                                newdata = men.df, 
-                                                type = "conditional")))
-  
-  # Select the correct prediction based on LFP: 
-  summary(women.NeedPermission.df$y_hat <- ifelse(women.NeedPermission.df$HHNeedPermission == 1, women.NeedPermission.df$"E[yo|ys=1]", women.NeedPermission.df$"E[yo|ys=0]"))
-  summary(men.NeedPermission.df$y_hat   <- ifelse(men.NeedPermission.df$HHNeedPermission == 1, men.NeedPermission.df$"E[yo|ys=1]", men.NeedPermission.df$"E[yo|ys=0]"))
-  
-  summary(y_hat.womensLFP.df <- cbind(select(  men.womensLFP.df, folio, ind_ID, wavenumber, y_hat), 
-                                      select(women.womensLFP.df, folio, ind_ID, wavenumber, y_hat)))
- 
-  
-  
-  
-    summary(exp(predict(men.reg.original, newdata = men.df, type = "conditional")))
-  summary(exp(predict(men.reg.womensLFP, newdata = men.df, type = "conditional")))
+  # # Add the predicted values to data.df, conditional on LFP
+  # women.NeedPermission.df <- cbind(women.df, exp(predict(women.reg.HHNeedPermission,
+  #                                                   newdata = women.df,
+  #                                                   type = "conditional")))
+  # 
+  # men.NeedPermission.df <- cbind(men.df, exp(predict(men.reg.HHNeedPermission,
+  #                                               newdata = men.df, 
+  #                                               type = "conditional")))
+  # 
+  # # Select the correct prediction based on LFP: 
+  # summary(women.NeedPermission.df$y_hat <- ifelse(women.NeedPermission.df$HHNeedPermission == 1, women.NeedPermission.df$"E[yo|ys=1]", women.NeedPermission.df$"E[yo|ys=0]"))
+  # summary(men.NeedPermission.df$y_hat   <- ifelse(men.NeedPermission.df$HHNeedPermission == 1, men.NeedPermission.df$"E[yo|ys=1]", men.NeedPermission.df$"E[yo|ys=0]"))
+  # 
+  # summary(y_hat.womensLFP.df <- cbind(select(  men.womensLFP.df, folio, ind_ID, wavenumber, y_hat), 
+  #                                     select(women.womensLFP.df, folio, ind_ID, wavenumber, y_hat)))
+  # 
+  # 
+  # 
+  # 
+  #   summary(exp(predict(men.reg.original, newdata = men.df, type = "conditional")))
+  # summary(exp(predict(men.reg.womensLFP, newdata = men.df, type = "conditional")))
   
   # (A.2) BP Function 
-BP.Fun <- function(){ #Calls shadow wage function
+
+  # creating the BP variable for each HH in each period. 
   
-  #Step 1: Call the SW function
-  y_hat_men_combined <- unique(SE.Fun(gender_number = 0)) # "_Combined" references the fact that all years are used in estimation
-  y_hat_women_combined <- unique(SE.Fun(gender_number = 1))
-  names(y_hat_men_combined) <- c("folio", "ind_ID", "wavenumber", "y_hat_men_combined") 
-  names(y_hat_women_combined) <- c("folio", "ind_ID", "wavenumber", "y_hat_women_combined")
+  Also need the T_Mom_total and T_dad_total, where the progresa values are stored. 
   
-  #step 2: Merging it into the sample analog. DO NOT DELETE THE LINES THAT CONVERT NA's TO 0's.
-  sample.analog <- left_join(sample.analog, y_hat_women_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
-  sample.analog$y_hat_women_combined[is.na(sample.analog$y_hat_women_combined)] <- 0
-  sample.analog <- left_join(sample.analog, y_hat_men_combined, by = c("folio", "ind_ID", "wavenumber"), all.x = TRUE)
-  sample.analog$y_hat_men_combined[is.na(sample.analog$y_hat_men_combined)] <- 0
+  parents1997 <- both.df %>% 
+    filter(head_dummy == 1, wavenumber == 1) %>% 
+    select(folio, ind_ID, Gender, fitted.wages, wages) %>%
+    pivot_wider(id_cols = folio, names_from = Gender, values_from = c(fitted.wages,wages)) %>%
+    select(folio, fitted.wages_men, fitted.wages_women, wages_men) %>%
+    rename(wages = wages_men)
   
-  #Step 3: In steps 1 and 2, every person in the HH has an estimated outside option / shadow earnings. We need to just have the mom and dad. 
-  sample.analog$Mom_SW_combined_a <- sample.analog$y_hat_women_combined * sample.analog$head_dummy
-  Mom_SW_combined.df <- aggregate(sample.analog$Mom_SW_combined_a, by = list(sample.analog$folio, sample.analog$wavenumber), FUN=sum)
-  names(Mom_SW_combined.df) <- c("folio", "wavenumber", "Mom_SW_combined")
-  sample.analog <- left_join(sample.analog, Mom_SW_combined.df)
+  parents1997$BP <- (1/2) + (1/2)*((fitted.wages_women + 
+       sample.analog$T_mom_total[sample.analog$wavenumber == 1]) - 
+      (sample.analog$Dad_SW_combined[sample.analog$wavenumber == 1] + 
+         sample.analog$T_dad_total[sample.analog$wavenumber == 1])) / 
+      (sample.analog$hh_wages[sample.analog$wavenumber == 1]))
+    
   
-  sample.analog$Dad_SW_combined_a <- sample.analog$y_hat_men_combined * sample.analog$head_dummy
-  Dad_SW_combined.df <- aggregate(sample.analog$Dad_SW_combined_a, by = list(Category=sample.analog$folio, sample.analog$wavenumber), FUN=sum)
-  names(Dad_SW_combined.df) <- c("folio", "wavenumber", "Dad_SW_combined")
-  sample.analog <- left_join(sample.analog, Dad_SW_combined.df)
+
+    
+    
+  parents1998 <- both.df %>% filter(head_dummy == 1, wavenumber == 2) %>% select(folio, ind_ID, sex, fitted.wages, wages)
+  parents2000 <- both.df %>% filter(head_dummy == 1, wavenumber == 3) %>% select(folio, ind_ID, sex, fitted.wages, wages) 
   
-  #Step 4: Generating the relative shadow earnings BP Estimtor
   
-  # BP <- 1/2 + 1/2 ((y_f^o - Y_m^o) / y)
   
- # There must be a tidy way to complete the below process  
- # sample.analog <- sample.analog %>% group_by(wavenumber) %>%
- #    mutate()
+  # 
+  
   
   
   sample.analog$BP[sample.analog$wave1 == 1] <-
